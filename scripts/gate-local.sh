@@ -16,10 +16,12 @@ echo "=== G1 sidecar summary ==="
 curl -sf "$SIDECAR/api/summary" | grep -q '"clients"'
 
 echo "=== PHPUnit ==="
-if [[ -f "$APP/vendor/bin/phpunit" ]]; then
+if command -v php >/dev/null 2>&1 && [[ -f "$APP/vendor/bin/phpunit" ]]; then
   (cd "$APP" && vendor/bin/phpunit -c phpunit.xml.dist)
+elif command -v docker >/dev/null 2>&1; then
+  docker run --rm -v "$APP:/app" -w /app composer:2 sh -c 'composer install --no-interaction -q && vendor/bin/phpunit -c phpunit.xml.dist'
 else
-  (cd "$APP" && composer install --no-interaction && vendor/bin/phpunit -c phpunit.xml.dist)
+  echo "SKIP PHPUnit (no php/docker)"
 fi
 
 echo "=== G0 deploy (optional SKIP_DEPLOY=1) ==="
