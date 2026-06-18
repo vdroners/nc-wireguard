@@ -9,5 +9,5 @@ NC app calls `/apps/nc_wireguard/api/dashboard/{path}` which proxies to sidecar 
 | `GET /api/connections` | `connections` | `days`, `client_id` query |
 | `GET /api/geoip` | `geoip` | |
 | `GET /api/system` | `system` | `hours` query |
-| `GET /api/health` | via `/api/status` | |
-| `GET /api/wg/client/{id}/configuration` | `/api/wg-easy/{id}/configuration` | read-only |
+| `GET /api/health` | `/api/status` (NC) | Aggregated sidecar + wg-easy status |
+| `GET /api/wg/client/{id}/configuration` | `/api/wg-easy/{id}/configuration` | Read-only; admin gate |

@@ -9,6 +9,9 @@ NC_GCS="/media/4TB/nc-gcs"
 echo "=== G0 build ==="
 (cd "$APP" && npm run build)
 
+echo "=== G0b lint ==="
+(cd "$APP" && npm run lint)
+
 echo "=== G1a sidecar health ==="
 curl -sf "$SIDECAR/api/health" | grep -q '"status"'
 

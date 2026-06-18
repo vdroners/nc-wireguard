@@ -1,3 +1,9 @@
+/**
+ * Shared dashboard summary + health poll state (Vue 2 observable singleton).
+ *
+ * WireGuardDashboard starts polling on mount; tabs read summaryStore directly.
+ * Do not add parallel summary fetches in tab components.
+ */
 import Vue from 'vue'
 import { fetchSummary, fetchStatus, extractApiError } from '../services/dashboard-api.js'
 
