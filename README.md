@@ -19,13 +19,9 @@ Nextcloud app for monitoring the **wg-easy VPN server** via the `wg-dashboard` s
 
 ## Sidecar reachability
 
-`cloud_app` must reach `wg-dashboard` on the Docker network:
+`cloud_app` must reach `wg-dashboard` on the Docker network `wireguard_default` (configured in `/media/4TB/cloud/docker-compose.yml`).
 
-```bash
-docker network connect wireguard_default cloud_app
-```
-
-Default internal URL: `http://wg-dashboard:8185` (not host loopback — sidecar publishes `127.0.0.1:8185` on the **host** only).
+Default internal URL: `http://wg-dashboard:8185`.
 
 ```bash
 cd /media/4TB/nc-wireguard
