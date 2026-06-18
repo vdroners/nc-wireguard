@@ -1,0 +1,23 @@
+{
+    "name": "vdroners/nc_wireguard",
+    "description": "NC WireGuard — wg-easy VPN monitoring Nextcloud app",
+    "license": "AGPL-3.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "OCA\\NcWireguard\\": "lib/"
+        }
+    },
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OCA\\NcWireguard\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit -c phpunit.xml.dist",
+        "test:unit": "phpunit -c phpunit.xml.dist --testsuite 'NcWireguard Unit'"
+    }
+}

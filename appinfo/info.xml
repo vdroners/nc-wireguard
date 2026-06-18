@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>nc_wireguard</id>
+	<name>NC WireGuard</name>
+	<summary>WireGuard VPN server monitoring for wg-easy</summary>
+	<description><![CDATA[Monitor wg-easy VPN peers, bandwidth history, connection events, GeoIP map, and server metrics inside Nextcloud with NC-GCS theming. Admin-only access; proxies to the wg-dashboard sidecar.]]></description>
+	<version>1.0.0</version>
+	<licence>agpl</licence>
+	<author>Veteran Droners</author>
+	<namespace>NcWireguard</namespace>
+	<category>tools</category>
+	<dependencies>
+		<nextcloud min-version="28" max-version="33"/>
+	</dependencies>
+	<navigations>
+		<navigation>
+			<name>NC WireGuard</name>
+			<route>nc_wireguard.page.index</route>
+			<icon>app.svg</icon>
+			<order>74</order>
+		</navigation>
+	</navigations>
+	<background-jobs>
+		<job>OCA\NcWireguard\BackgroundJob\SidecarWatchdogJob</job>
+	</background-jobs>
+	<settings>
+		<admin>OCA\NcWireguard\Settings\AdminSettings</admin>
+		<admin-section>OCA\NcWireguard\Settings\AdminSection</admin-section>
+	</settings>
+</info>

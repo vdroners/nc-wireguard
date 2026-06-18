@@ -1,0 +1,10 @@
+@import 'nc-wireguard-theme';
+
+#nc-wireguard-root,
+#nc-wireguard-admin-root {
+	min-height: 100%;
+}
+
+.nc-gcs-app-shell--nc_wireguard {
+	--gcs-accent: #dc2626;
+}
