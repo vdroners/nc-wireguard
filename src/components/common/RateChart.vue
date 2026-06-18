@@ -25,7 +25,8 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, TimeScale
 export default {
 	name: 'RateChart',
 	props: {
-		title: { type: String, required: true },
+		title: { type: String, default: '' },
+		showTitle: { type: Boolean, default: true },
 		datasets: { type: Array, default: () => [] },
 		yMax: { type: Number, default: null },
 		yFormat: { type: String, default: 'bytes' },
@@ -70,6 +71,9 @@ export default {
 				pointRadius: 0,
 				borderWidth: 1.5,
 			}))
+			const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-main-text').trim() || '#e5e5e5'
+			const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-maxcontrast').trim() || '#737373'
+			const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim() || '#333'
 			this.chart = new Chart(ctx, {
 				type: 'line',
 				data: { datasets: ds },
@@ -79,24 +83,24 @@ export default {
 					plugins: {
 						legend: {
 							display: this.showLegend,
-							labels: { color: '#a3a3a3', boxWidth: 12, font: { size: 11 } },
+							labels: { color: mutedColor, boxWidth: 12, font: { size: 11 } },
 						},
 						title: {
-							display: true,
+							display: this.showTitle && !!this.title,
 							text: this.title,
-							color: '#e5e5e5',
+							color: textColor,
 							font: { size: 13 },
 						},
 					},
 					scales: {
 						x: {
 							type: 'time',
-							ticks: { color: '#737373', maxTicksLimit: 10 },
-							grid: { color: '#333' },
+							ticks: { color: mutedColor, maxTicksLimit: 10 },
+							grid: { color: gridColor },
 						},
 						y: {
-							ticks: { color: '#737373', callback: v => this.yCallback(v) },
-							grid: { color: '#333' },
+							ticks: { color: mutedColor, callback: v => this.yCallback(v) },
+							grid: { color: gridColor },
 							beginAtZero: true,
 							max: this.yMax ?? undefined,
 						},

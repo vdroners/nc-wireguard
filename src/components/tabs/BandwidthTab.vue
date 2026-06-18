@@ -1,25 +1,26 @@
 <template>
 	<div class="nc-wg-tab">
 		<ErrorBanner v-if="error" :message="error" @dismiss="error = ''" />
-		<div class="nc-wg-toolbar">
-			<label>Time range:</label>
-			<select v-model="hours" @change="load">
-				<option :value="1">1 hour</option>
-				<option :value="6">6 hours</option>
-				<option :value="24">24 hours</option>
-				<option :value="168">7 days</option>
-			</select>
-			<label>Client:</label>
-			<select v-model="clientId" @change="load">
-				<option value="">All</option>
-				<option v-for="c in clients" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-			</select>
-			<button type="button" class="nc-wg-btn nc-wg-btn--primary" @click="load">Refresh</button>
-		</div>
+		<HistoryToolbar
+			:time-value="hours"
+			:time-options="timeOptions"
+			:client-id="clientId"
+			:clients="clients"
+			@time-change="hours = $event; load()"
+			@client-change="clientId = $event; load()"
+			@refresh="load" />
 		<p v-if="coldStartHint" class="nc-wg-hint">{{ coldStartHint }}</p>
 		<LoadingState v-if="loading" message="Loading bandwidth…" />
-		<div class="card p-4 mb-4"><RateChart title="Download Rate (Rx)" :datasets="rxDatasets" /></div>
-		<div class="card p-4"><RateChart title="Upload Rate (Tx)" :datasets="txDatasets" /></div>
+		<div class="nc-wg-chart-grid">
+			<div class="card p-4">
+				<h3 class="nc-wg-chart-title">Download Rate (Rx)</h3>
+				<RateChart :datasets="rxDatasets" :show-title="false" />
+			</div>
+			<div class="card p-4">
+				<h3 class="nc-wg-chart-title">Upload Rate (Tx)</h3>
+				<RateChart :datasets="txDatasets" :show-title="false" />
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -29,10 +30,11 @@ import { buildBandwidthRateDatasets } from '../../utils/bandwidth-rates.js'
 import ErrorBanner from '../common/ErrorBanner.vue'
 import LoadingState from '../common/LoadingState.vue'
 import RateChart from '../common/RateChart.vue'
+import HistoryToolbar from '../HistoryToolbar.vue'
 
 export default {
 	name: 'BandwidthTab',
-	components: { ErrorBanner, LoadingState, RateChart },
+	components: { ErrorBanner, LoadingState, RateChart, HistoryToolbar },
 	props: {
 		active: { type: Boolean, default: false },
 		clients: { type: Array, default: () => [] },
@@ -47,6 +49,12 @@ export default {
 			loading: false,
 			loaded: false,
 			coldStartHint: '',
+			timeOptions: [
+				{ value: 1, label: '1 hour' },
+				{ value: 6, label: '6 hours' },
+				{ value: 24, label: '24 hours' },
+				{ value: 168, label: '7 days' },
+			],
 		}
 	},
 	watch: {

@@ -1,14 +1,12 @@
-import { ref, readonly } from 'vue'
-
-const clients = ref([])
+import { summaryStore } from './useDashboardSummary.js'
 
 export function useClientList() {
 	function setClients(list) {
-		clients.value = Array.isArray(list) ? list : []
+		summaryStore.clients = Array.isArray(list) ? list : []
 	}
 
 	return {
-		clients: readonly(clients),
+		clients: () => summaryStore.clients,
 		setClients,
 	}
 }

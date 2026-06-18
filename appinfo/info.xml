@@ -5,7 +5,7 @@
 	<name>NC WireGuard</name>
 	<summary>WireGuard VPN server monitoring for wg-easy</summary>
 	<description><![CDATA[Monitor wg-easy VPN peers, bandwidth history, connection events, GeoIP map, and server metrics inside Nextcloud with NC-GCS theming. Admin-only access; proxies to the wg-dashboard sidecar.]]></description>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<licence>agpl</licence>
 	<author>Veteran Droners</author>
 	<namespace>NcWireguard</namespace>

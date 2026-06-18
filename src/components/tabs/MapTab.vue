@@ -2,25 +2,34 @@
 	<div class="nc-wg-tab">
 		<ErrorBanner v-if="error" :message="error" @dismiss="error = ''" />
 		<LoadingState v-if="loading" message="Loading map…" />
-		<div class="card p-4 mb-4">
-			<div ref="mapEl" class="nc-wg-map" />
-		</div>
-		<div class="card nc-wg-table-wrap">
-			<div class="nc-wg-table-scroll">
-				<table class="nc-wg-table">
-					<thead>
-						<tr><th>IP</th><th>Country</th><th>City</th><th>ISP</th><th>Coordinates</th></tr>
-					</thead>
-					<tbody>
-						<tr v-for="g in geoRows" :key="g.ip">
-							<td class="mono">{{ g.ip }}</td>
-							<td>{{ g.country || '—' }} {{ g.country_code ? '(' + g.country_code + ')' : '' }}</td>
-							<td>{{ g.city || '—' }}</td>
-							<td class="muted">{{ g.isp || '—' }}</td>
-							<td class="mono muted">{{ formatCoords(g) }}</td>
-						</tr>
-					</tbody>
-				</table>
+		<div class="nc-wg-map-layout">
+			<div class="card p-4 nc-wg-map-panel">
+				<div ref="mapEl" class="nc-wg-map" />
+			</div>
+			<div class="card nc-wg-map-list">
+				<button
+					type="button"
+					class="nc-wg-map-list__toggle nc-wg-btn nc-wg-btn--sm"
+					@click="listOpen = !listOpen">
+					{{ listOpen ? 'Hide IP list' : 'Show IP list' }} ({{ geoRows.length }})
+				</button>
+				<div v-show="listOpen" class="nc-wg-table-wrap">
+					<div class="nc-wg-table-scroll">
+						<table class="nc-wg-table">
+							<thead>
+								<tr><th>IP</th><th>Country</th><th>City</th><th>ISP</th></tr>
+							</thead>
+							<tbody>
+								<tr v-for="g in geoRows" :key="g.ip">
+									<td class="mono">{{ g.ip }}</td>
+									<td>{{ countryFlag(g.country_code) }} {{ g.country || '—' }}</td>
+									<td>{{ g.city || '—' }}</td>
+									<td class="muted nc-wg-truncate" :title="g.isp || ''">{{ g.isp || '—' }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -30,6 +39,7 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { fetchGeoip, extractApiError } from '../../services/dashboard-api.js'
+import { countryFlag } from '../../utils/peer.js'
 import ErrorBanner from '../common/ErrorBanner.vue'
 import LoadingState from '../common/LoadingState.vue'
 
@@ -47,6 +57,7 @@ export default {
 			error: '',
 			loading: false,
 			loaded: false,
+			listOpen: false,
 		}
 	},
 	watch: {
@@ -61,6 +72,7 @@ export default {
 		this.destroyMap()
 	},
 	methods: {
+		countryFlag,
 		formatCoords(g) {
 			if (g.lat == null || g.lon == null) return '—'
 			return `${g.lat.toFixed(2)}, ${g.lon.toFixed(2)}`
@@ -78,6 +90,8 @@ export default {
 			try {
 				const data = await fetchGeoip()
 				this.geoRows = data
+				this.listOpen = !(data.some(g => g.lat && g.lon))
+				this.$emit('geo-count', data.length)
 				this.loaded = true
 				await this.$nextTick()
 				this.renderMap(data)
