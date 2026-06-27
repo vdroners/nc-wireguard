@@ -86,7 +86,8 @@ class HostProcCollector
 			return ['idle' => 0, 'total' => 0];
 		}
 		$parts = preg_split('/\s+/', trim($lines[0]));
-		if (!is_array($parts) || ($parts[0] ?? '') !== 'cpu:' || count($parts) < 5) {
+		// Aggregate line is "cpu" (Linux /proc/stat); not "cpu:".
+		if (!is_array($parts) || ($parts[0] ?? '') !== 'cpu' || count($parts) < 5) {
 			return ['idle' => 0, 'total' => 0];
 		}
 		array_shift($parts);

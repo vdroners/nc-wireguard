@@ -29,7 +29,8 @@ final class HostProcCollectorTest extends TestCase
 		self::assertArrayHasKey('cpu_snapshot', $first);
 
 		$second = $collector->collect($first['cpu_snapshot']);
-		self::assertSame(0.0, $second['cpu_percent']);
+		self::assertSame(0.0, $second['cpu_percent']); // same fixture → zero delta
+		self::assertGreaterThan(0, $first['cpu_snapshot']['total']);
 	}
 
 	public function testFallsBackToProcWhenMountMissing(): void
