@@ -11,3 +11,4 @@
 /src/_nc_gcs_src_mirror/
 *.log
 .DS_Store
+/.backups/
