@@ -1,6 +1,6 @@
 {
   "name": "nc_wireguard",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "WireGuard VPN server monitoring for Nextcloud",
   "license": "AGPL-3.0-or-later",

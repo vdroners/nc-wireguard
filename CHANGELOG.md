@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.1] - 2026-06-27
+
+### Fixed
+
+- `HostProcCollector` — parse aggregate CPU line as `cpu` (not `cpu:`) from `/proc/stat`; system metrics no longer stuck at 0% CPU
+
 ## [2.0.0] - 2026-06-27
 
 ### Added
