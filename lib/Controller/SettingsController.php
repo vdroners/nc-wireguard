@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
-use OCA\NcWireguard\Service\DashboardHttpClient;
+use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\NativeHealthService;
+use OCA\NcWireguard\Service\WgEasyProbe;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -21,7 +23,9 @@ class SettingsController extends Controller
 	public function __construct(
 		IRequest $request,
 		private IConfig $config,
-		private DashboardHttpClient $httpClient,
+		private AppSettings $appSettings,
+		private NativeHealthService $nativeHealth,
+		private WgEasyProbe $wgEasyProbe,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
 	) {
@@ -45,37 +49,20 @@ class SettingsController extends Controller
 			return $deny;
 		}
 		return new JSONResponse([
-			'dashboard_internal_url' => $this->config->getAppValue(
-				Application::APP_ID,
-				'dashboard_internal_url',
-				'http://wg-dashboard:8185'
-			),
-			'dashboard_enabled' => $this->httpClient->isEnabled(),
+			'dashboard_enabled' => $this->appSettings->isDashboardEnabled(),
 			'wg_easy_admin_url' => $this->config->getAppValue(
 				Application::APP_ID,
 				'wg_easy_admin_url',
 				'https://vpn-vdroners.ddns.net/'
 			),
-			'dashboard_proxy_connect_timeout' => $this->config->getAppValue(
-				Application::APP_ID,
-				'dashboard_proxy_connect_timeout',
-				'5'
-			),
-			'dashboard_proxy_timeout' => $this->config->getAppValue(
-				Application::APP_ID,
-				'dashboard_proxy_timeout',
-				'30'
-			),
-			'watchdog_enabled' => $this->config->getAppValue(
-				Application::APP_ID,
-				'watchdog_enabled',
-				'1'
-			) === '1',
-			'watchdog_interval_minutes' => $this->config->getAppValue(
-				Application::APP_ID,
-				'watchdog_interval_minutes',
-				'5'
-			),
+			'wg_easy_api_url' => $this->appSettings->getWgEasyApiUrl(),
+			'wg_easy_username' => $this->appSettings->getWgEasyUsername(),
+			'wg_easy_password_configured' => $this->appSettings->isWgEasyPasswordConfigured(),
+			'poll_interval_seconds' => $this->appSettings->getPollIntervalSeconds(),
+			'retention_days' => $this->appSettings->getRetentionDays(),
+			'geoip_enabled' => $this->appSettings->isGeoIpEnabled(),
+			'watchdog_enabled' => $this->appSettings->isWatchdogEnabled(),
+			'watchdog_interval_minutes' => $this->appSettings->getWatchdogIntervalMinutes(),
 		]);
 	}
 
@@ -92,19 +79,8 @@ class SettingsController extends Controller
 			return new JSONResponse(['error' => 'Invalid JSON'], Http::STATUS_BAD_REQUEST);
 		}
 
-		if (isset($data['dashboard_internal_url'])) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'dashboard_internal_url',
-				trim((string) $data['dashboard_internal_url'])
-			);
-		}
 		if (array_key_exists('dashboard_enabled', $data)) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'dashboard_enabled',
-				$data['dashboard_enabled'] ? '1' : '0'
-			);
+			$this->appSettings->setDashboardEnabled((bool) $data['dashboard_enabled']);
 		}
 		if (isset($data['wg_easy_admin_url'])) {
 			$this->config->setAppValue(
@@ -113,33 +89,29 @@ class SettingsController extends Controller
 				trim((string) $data['wg_easy_admin_url'])
 			);
 		}
-		if (isset($data['dashboard_proxy_connect_timeout'])) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'dashboard_proxy_connect_timeout',
-				(string) max(1, min(30, (int) $data['dashboard_proxy_connect_timeout']))
-			);
+		if (isset($data['wg_easy_api_url'])) {
+			$this->appSettings->setWgEasyApiUrl((string) $data['wg_easy_api_url']);
 		}
-		if (isset($data['dashboard_proxy_timeout'])) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'dashboard_proxy_timeout',
-				(string) max(5, min(120, (int) $data['dashboard_proxy_timeout']))
-			);
+		if (isset($data['wg_easy_username'])) {
+			$this->appSettings->setWgEasyUsername((string) $data['wg_easy_username']);
+		}
+		if (isset($data['wg_easy_password']) && (string) $data['wg_easy_password'] !== '') {
+			$this->appSettings->setWgEasyPassword((string) $data['wg_easy_password']);
+		}
+		if (isset($data['poll_interval_seconds'])) {
+			$this->appSettings->setPollIntervalSeconds((int) $data['poll_interval_seconds']);
+		}
+		if (isset($data['retention_days'])) {
+			$this->appSettings->setRetentionDays((int) $data['retention_days']);
+		}
+		if (array_key_exists('geoip_enabled', $data)) {
+			$this->appSettings->setGeoIpEnabled((bool) $data['geoip_enabled']);
 		}
 		if (array_key_exists('watchdog_enabled', $data)) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'watchdog_enabled',
-				$data['watchdog_enabled'] ? '1' : '0'
-			);
+			$this->appSettings->setWatchdogEnabled((bool) $data['watchdog_enabled']);
 		}
 		if (isset($data['watchdog_interval_minutes'])) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'watchdog_interval_minutes',
-				(string) max(1, min(60, (int) $data['watchdog_interval_minutes']))
-			);
+			$this->appSettings->setWatchdogIntervalMinutes((int) $data['watchdog_interval_minutes']);
 		}
 
 		return $this->getSettings();
@@ -152,17 +124,39 @@ class SettingsController extends Controller
 		if ($deny = $this->requireAdmin()) {
 			return $deny;
 		}
-		$result = $this->httpClient->get('/api/health');
+		$appVersion = $this->config->getAppValue(Application::APP_ID, 'installed_version', '');
+		$health = $this->nativeHealth->getHealth($appVersion);
+		$ok = ($health['status'] ?? '') === 'ok';
+		if (!$ok) {
+			return new JSONResponse([
+				'ok' => false,
+				'health' => $health,
+			], Http::STATUS_BAD_GATEWAY);
+		}
+		return new JSONResponse([
+			'ok' => true,
+			'health' => $health,
+		]);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function testWgEasy(): JSONResponse
+	{
+		if ($deny = $this->requireAdmin()) {
+			return $deny;
+		}
+		$result = $this->wgEasyProbe->testSession();
 		if (!$result['ok']) {
 			return new JSONResponse([
 				'ok' => false,
-				'error' => $result['error'] ?: 'Connection failed',
+				'error' => $result['error'],
+				'http_code' => $result['http_code'],
 			], Http::STATUS_BAD_GATEWAY);
 		}
-		$data = json_decode((string) $result['body'], true);
 		return new JSONResponse([
-			'ok' => is_array($data) && ($data['status'] ?? '') === 'ok',
-			'health' => $data,
+			'ok' => true,
+			'client_count' => $result['client_count'],
 		]);
 	}
 }

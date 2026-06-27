@@ -1,0 +1,162 @@
+[
+  {
+    "ts": "2026-06-27T15:49:32.639080+00:00",
+    "cpu_percent": 26.0,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66440728,
+    "net_tx_bytes": 14834924
+  },
+  {
+    "ts": "2026-06-27T15:50:02.687516+00:00",
+    "cpu_percent": 27.1,
+    "mem_percent": 15.8,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66456522,
+    "net_tx_bytes": 14838929
+  },
+  {
+    "ts": "2026-06-27T15:50:32.732022+00:00",
+    "cpu_percent": 26.7,
+    "mem_percent": 15.7,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66468456,
+    "net_tx_bytes": 14841739
+  },
+  {
+    "ts": "2026-06-27T15:51:02.770095+00:00",
+    "cpu_percent": 26.4,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66480600,
+    "net_tx_bytes": 14844507
+  },
+  {
+    "ts": "2026-06-27T15:51:32.810344+00:00",
+    "cpu_percent": 26.0,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66491232,
+    "net_tx_bytes": 14847275
+  },
+  {
+    "ts": "2026-06-27T15:52:02.867779+00:00",
+    "cpu_percent": 26.5,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66506442,
+    "net_tx_bytes": 14850043
+  },
+  {
+    "ts": "2026-06-27T15:52:32.921990+00:00",
+    "cpu_percent": 25.8,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66518334,
+    "net_tx_bytes": 14852811
+  },
+  {
+    "ts": "2026-06-27T15:53:02.961065+00:00",
+    "cpu_percent": 26.2,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66529470,
+    "net_tx_bytes": 14855579
+  },
+  {
+    "ts": "2026-06-27T15:53:33.015298+00:00",
+    "cpu_percent": 26.0,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66539920,
+    "net_tx_bytes": 14858347
+  },
+  {
+    "ts": "2026-06-27T15:54:03.061568+00:00",
+    "cpu_percent": 26.0,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66553744,
+    "net_tx_bytes": 14861115
+  },
+  {
+    "ts": "2026-06-27T15:54:33.110550+00:00",
+    "cpu_percent": 25.8,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66566728,
+    "net_tx_bytes": 14863883
+  },
+  {
+    "ts": "2026-06-27T15:55:03.169196+00:00",
+    "cpu_percent": 28.4,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66577864,
+    "net_tx_bytes": 14866651
+  },
+  {
+    "ts": "2026-06-27T15:55:33.217511+00:00",
+    "cpu_percent": 26.2,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66588496,
+    "net_tx_bytes": 14869419
+  },
+  {
+    "ts": "2026-06-27T15:56:03.268730+00:00",
+    "cpu_percent": 27.7,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66602404,
+    "net_tx_bytes": 14872187
+  },
+  {
+    "ts": "2026-06-27T15:56:33.321889+00:00",
+    "cpu_percent": 26.2,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66615304,
+    "net_tx_bytes": 14874955
+  },
+  {
+    "ts": "2026-06-27T15:57:03.370588+00:00",
+    "cpu_percent": 26.3,
+    "mem_percent": 15.8,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66626692,
+    "net_tx_bytes": 14877723
+  },
+  {
+    "ts": "2026-06-27T15:57:33.413007+00:00",
+    "cpu_percent": 26.1,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66638080,
+    "net_tx_bytes": 14880491
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "cpu_percent": 26.1,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66651652,
+    "net_tx_bytes": 14883259
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "cpu_percent": 25.8,
+    "mem_percent": 15.6,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66664888,
+    "net_tx_bytes": 14886027
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "cpu_percent": 26.9,
+    "mem_percent": 15.7,
+    "disk_percent": 38.3,
+    "net_rx_bytes": 66676024,
+    "net_tx_bytes": 14888795
+  }
+]

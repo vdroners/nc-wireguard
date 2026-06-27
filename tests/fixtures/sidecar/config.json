@@ -1,0 +1,4 @@
+{
+  "_fixture_note": "Sanitized WireGuard client config shape. Sidecar wraps wg-easy GET /api/client/{id}/configuration as {\"configuration\": \"<text>\"}. Captured 2026-06-27; keys redacted.",
+  "configuration": "[Interface]\nPrivateKey = REDACTED_PRIVATE_KEY=\nAddress = 10.8.0.3/32, fdcc:ad94:bacf:61a4::cafe:3/128\nMTU = 1420\nDNS = 1.1.1.1, 2606:4700:4700::1111\n\n[Peer]\nPublicKey = REDACTED_SERVER_PUBLIC_KEY=\nPresharedKey = REDACTED_PRESHARED_KEY=\nAllowedIPs = 0.0.0.0/0, ::/0\nPersistentKeepalive = 0\nEndpoint = vpn-vdroners.ddns.net:51820"
+}

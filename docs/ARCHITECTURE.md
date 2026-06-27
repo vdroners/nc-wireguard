@@ -6,24 +6,24 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │ Nextcloud (cloud_app)                                           │
 │  ┌──────────────────┐    ┌─────────────────────────────────┐  │
-│  │ Vue SPA          │───▶│ PHP proxy (admin-only)          │  │
+│  │ Vue SPA          │───▶│ PHP native API (admin-only)     │  │
 │  │ WireGuardDashboard│    │ DashboardProxyController        │  │
 │  │ + 5 tabs         │    │ WgEasyReadProxyController       │  │
 │  └──────────────────┘    └──────────────┬──────────────────┘  │
+│                                         │                       │
+│  ┌──────────────────────────────────────▼──────────────────┐  │
+│  │ MySQL nc_wg_* tables (bandwidth, connections, geoip, …)  │  │
+│  │ MetricsPollService ← occ nc_wireguard:poll-metrics       │  │
+│  └──────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────│────────────────────┘
                                            │ HTTP (wireguard_default)
-                                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ wg-dashboard sidecar (:8185, loopback on host)                  │
-│  Poller → SQLite (metrics, connection_log, geoip_cache)         │
-│  Session bridge → wg-easy REST API                              │
-└─────────────────────────────────────────────────────────────────┘
-                                           │
                                            ▼
                               wg-easy (WireGuard UI + peers)
 ```
 
 Public legacy URL `https://vpn-vdroners.ddns.net/dashboard/` was retired at cutover (2026-06-18). Operators use the NC app only.
+
+**v2.0.0** removed the wg-dashboard sidecar; all dashboard routes are served from NC MySQL tables populated by the native poller.
 
 ## Frontend (`src/`)
 
@@ -61,18 +61,39 @@ Only files **outside** `src/_nc_gcs_src_mirror/` are owned by this app. The mirr
 
 | Class | Role |
 |-------|------|
-| `DashboardProxyController` | Whitelist proxy to sidecar `/api/{summary,bandwidth,...}` |
-| `WgEasyReadProxyController` | Read-only peer WireGuard config |
-| `DashboardHttpClient` | HTTP client, timeout, base URL from app config |
-| `PathSanitizer` | Block path traversal on proxy segments |
-| `SidecarWatchdogJob` | Background job: sidecar health check |
+| `DashboardProxyController` | Native dashboard routes: summary, bandwidth, connections, geoip, system, health |
+| `WgEasyReadProxyController` | Read-only peer WireGuard config via `WgEasyClient` |
+| `NativeDashboardService` | Builds dashboard JSON from MySQL mappers |
+| `NativeHealthService` | Aggregates poller heartbeat, wg-easy, host proc |
+| `MetricsPollService` | Poll loop: wg-easy clients → DB writes |
+| `WgEasyClient` | Session auth + REST calls to wg-easy |
+| `HostProcCollector` | CPU/mem/disk/net from `/host/proc` or `/proc` |
+| `DockerUrlResolver` | Rewrites `host.docker.internal` when DNS fails in container |
+| `MetricsHealthJob` | Background job: stale poll / wg-easy failure logging |
+| `PathSanitizer` | Block path traversal on API segments |
 | `CspListener` | CSP allowances for maps/charts |
 
-Every dashboard API path checks **Nextcloud admin** before proxying. Non-admins receive HTTP 403 (UI shows full-page message).
+Every dashboard API path checks **Nextcloud admin** before responding. Non-admins receive HTTP 403.
 
-Allowed proxy roots: `summary`, `bandwidth`, `connections`, `geoip`, `system`, `health`.
+Allowed dashboard roots: `summary`, `bandwidth`, `connections`, `geoip`, `system`, `health`.
 
-See [API_PARITY.md](API_PARITY.md) for the full path table.
+See [API_PARITY.md](API_PARITY.md) for response shapes.
+
+Golden JSON for parity tests: [`tests/fixtures/sidecar/`](../tests/fixtures/sidecar/) (historical reference; sidecar archived v2.0).
+
+### Host metrics
+
+Native poller host metrics use **`HostProcCollector`** with read-only `/host/proc` in `cloud_app`. Full audit: [HOST_METRICS_AUDIT.md](HOST_METRICS_AUDIT.md).
+
+### Poller operations
+
+| Command | Purpose |
+|---------|---------|
+| `occ nc_wireguard:poll-metrics` | Single poll (flock; use `--no-lock` for smoke) |
+| `occ nc_wireguard:prune-metrics` | Delete rows older than retention |
+| `occ nc_wireguard:schema-check` | Verify MySQL schema |
+
+Systemd unit files: [`docs/ops/nc-wireguard-poll-metrics.timer`](ops/nc-wireguard-poll-metrics.timer), [`docs/ops/nc-wireguard-prune-metrics.timer`](ops/nc-wireguard-prune-metrics.timer).
 
 ## Deploy artifact
 
@@ -82,6 +103,6 @@ Built assets live in `js/` and `css/style.css` (generated; not committed).
 
 ## Security notes
 
-- Sidecar binds **127.0.0.1:8185** on the host; NC reaches it via Docker network only.
 - No write access to wg-easy from NC app (read-only config fetch).
-- Proxy path whitelist + traversal guard on `{path}` route parameter.
+- Path whitelist + traversal guard on `{path}` route parameter.
+- wg-easy credentials stored encrypted via `SecretCrypto`.

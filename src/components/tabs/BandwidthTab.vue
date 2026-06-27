@@ -74,7 +74,7 @@ export default {
 				this.rxDatasets = rxDatasets
 				this.txDatasets = txDatasets
 				this.coldStartHint = sampleCount < 2
-					? 'Collecting metrics — charts populate after ~60 seconds of sidecar polling.'
+					? 'Collecting metrics — charts populate after ~60 seconds of polling.'
 					: ''
 				this.loaded = true
 			} catch (e) {

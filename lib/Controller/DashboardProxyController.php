@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
-use OCA\NcWireguard\Service\DashboardHttpClient;
+use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\NativeDashboardService;
+use OCA\NcWireguard\Service\NativeHealthService;
 use OCA\NcWireguard\Service\PathSanitizer;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -13,16 +15,23 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
+use OCP\IConfig;
 use OCP\IGroupManager;
 use OCP\IRequest;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Native dashboard API (summary, bandwidth, connections, geoip, system, health).
+ */
 class DashboardProxyController extends Controller
 {
 	public function __construct(
 		IRequest $request,
-		private DashboardHttpClient $httpClient,
+		private AppSettings $appSettings,
+		private NativeDashboardService $nativeDashboard,
+		private NativeHealthService $nativeHealth,
+		private IConfig $config,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
@@ -53,7 +62,7 @@ class DashboardProxyController extends Controller
 			);
 		}
 
-		if (!$this->httpClient->isEnabled()) {
+		if (!$this->appSettings->isDashboardEnabled()) {
 			return new JSONResponse(
 				[
 					'message' => 'WireGuard dashboard is disabled in NC WireGuard settings.',
@@ -84,43 +93,47 @@ class DashboardProxyController extends Controller
 			);
 		}
 
-		$query = $this->sanitizeQueryString(
-			$this->request->server['QUERY_STRING'] ?? ''
-		);
-
-		$result = $this->httpClient->get('/api/' . $safePath, $query);
-		if (!$result['ok']) {
-			$this->logger->error('Dashboard proxy unreachable', [
-				'path' => $safePath,
-				'error' => $result['error'],
-			]);
-			return new JSONResponse(
-				['error' => 'Dashboard sidecar unreachable', 'reason' => 'backend_unreachable'],
-				Http::STATUS_BAD_GATEWAY
-			);
-		}
-
-		$data = json_decode((string) $result['body'], true);
-		if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-			return new JSONResponse(
-				['error' => 'Invalid JSON from sidecar'],
-				Http::STATUS_BAD_GATEWAY
-			);
-		}
-
-		return new JSONResponse($data, $result['http_code'] ?: Http::STATUS_OK);
+		return $this->serveNative($root);
 	}
 
-	private function sanitizeQueryString(string $raw): string
+	private function serveNative(string $root): Response
 	{
-		if ($raw === '') {
-			return '';
+		$params = $this->request->getParams();
+		$appVersion = $this->config->getAppValue(Application::APP_ID, 'installed_version', '');
+
+		switch ($root) {
+			case 'summary':
+				$data = $this->nativeDashboard->buildSummary();
+				if (isset($data['error'])) {
+					return new JSONResponse($data, Http::STATUS_BAD_GATEWAY);
+				}
+				return new JSONResponse($data);
+
+			case 'bandwidth':
+				$hours = isset($params['hours']) ? (int) $params['hours'] : 24;
+				$clientId = isset($params['client_id']) ? (int) $params['client_id'] : null;
+				return new JSONResponse($this->nativeDashboard->fetchBandwidth($hours, $clientId));
+
+			case 'connections':
+				$days = isset($params['days']) ? (int) $params['days'] : 7;
+				$clientId = isset($params['client_id']) ? (int) $params['client_id'] : null;
+				return new JSONResponse($this->nativeDashboard->fetchConnections($days, $clientId));
+
+			case 'geoip':
+				return new JSONResponse($this->nativeDashboard->fetchGeoip());
+
+			case 'system':
+				$hours = isset($params['hours']) ? (int) $params['hours'] : 24;
+				return new JSONResponse($this->nativeDashboard->fetchSystem($hours));
+
+			case 'health':
+				return new JSONResponse($this->nativeHealth->getHealth($appVersion));
+
+			default:
+				return new JSONResponse(
+					['message' => 'Path not allowed', 'reason' => 'bad_path'],
+					Http::STATUS_BAD_REQUEST
+				);
 		}
-		parse_str($raw, $params);
-		unset($params['_route'], $params['_url']);
-		if (empty($params)) {
-			return '';
-		}
-		return http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 	}
 }

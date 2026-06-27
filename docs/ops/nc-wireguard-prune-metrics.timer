@@ -1,0 +1,10 @@
+[Unit]
+Description=NC WireGuard metrics prune daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=nc-wireguard-prune-metrics.service
+
+[Install]
+WantedBy=timers.target

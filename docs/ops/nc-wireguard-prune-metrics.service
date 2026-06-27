@@ -1,0 +1,13 @@
+[Unit]
+Description=NC WireGuard metrics retention prune
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/docker exec cloud_app php occ nc_wireguard:prune-metrics
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

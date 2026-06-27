@@ -1,0 +1,142 @@
+[
+  {
+    "ts": "2026-06-27T15:57:33.413007+00:00",
+    "client_id": 5,
+    "name": "Takaradi GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:57:33.413007+00:00",
+    "client_id": 6,
+    "name": "Tema Windows PC",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "client_id": 1,
+    "name": "Server",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "client_id": 2,
+    "name": "GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "client_id": 3,
+    "name": "Tema GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "client_id": 4,
+    "name": "Galeforce Laptop",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "client_id": 5,
+    "name": "Takaradi GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:03.468010+00:00",
+    "client_id": 6,
+    "name": "Tema Windows PC",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "client_id": 1,
+    "name": "Server",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "client_id": 2,
+    "name": "GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "client_id": 3,
+    "name": "Tema GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "client_id": 4,
+    "name": "Galeforce Laptop",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "client_id": 5,
+    "name": "Takaradi GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:58:33.522309+00:00",
+    "client_id": 6,
+    "name": "Tema Windows PC",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "client_id": 1,
+    "name": "Server",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "client_id": 2,
+    "name": "GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "client_id": 3,
+    "name": "Tema GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "client_id": 4,
+    "name": "Galeforce Laptop",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "client_id": 5,
+    "name": "Takaradi GCS",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  },
+  {
+    "ts": "2026-06-27T15:59:03.574627+00:00",
+    "client_id": 6,
+    "name": "Tema Windows PC",
+    "transfer_rx": 0,
+    "transfer_tx": 0
+  }
+]

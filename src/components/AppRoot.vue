@@ -7,6 +7,9 @@
 		<template #banner-extra>
 			<div class="nc-wg-banner-extra">
 				<span v-if="statusLine" class="nc-wg-banner-chip">{{ statusLine }}</span>
+				<span v-if="backendChip" class="nc-wg-banner-chip nc-wg-banner-chip--muted">
+					{{ backendChip }}
+				</span>
 				<span v-if="healthChip" class="nc-wg-banner-chip" :class="healthChip.ok ? 'nc-wg-banner-chip--ok' : 'nc-wg-banner-chip--err'">
 					{{ healthChip.text }}
 				</span>
@@ -55,16 +58,21 @@ export default {
 			if (!s) return ''
 			return `${s.connectedCount}/${s.totalClients} online`
 		},
+		backendChip() {
+			const h = this.store.health
+			if (!h || !h.is_admin) return ''
+			return 'Native backend'
+		},
 		healthChip() {
 			const h = this.store.health
-			if (!h) return null
-			if (h.sidecar_ok && h.wg_easy_ok) {
-				return { ok: true, text: 'Sidecar OK · wg-easy OK' }
+			if (!h || !h.is_admin) return null
+			if (h.native_ok && h.wg_easy_ok) {
+				return { ok: true, text: 'Native OK · wg-easy OK' }
 			}
 			const parts = []
-			if (!h.sidecar_ok) parts.push('Sidecar down')
+			if (!h.poller_ok) parts.push('Poller stale')
 			if (!h.wg_easy_ok) parts.push('wg-easy down')
-			return { ok: false, text: parts.join(' · ') }
+			return { ok: false, text: parts.join(' · ') || 'Native degraded' }
 		},
 	},
 }

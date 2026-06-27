@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
-use OCA\NcWireguard\Service\DashboardHttpClient;
+use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\NativeHealthService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -20,7 +21,8 @@ class ApiController extends Controller
 	public function __construct(
 		IRequest $request,
 		private IConfig $config,
-		private DashboardHttpClient $httpClient,
+		private AppSettings $appSettings,
+		private NativeHealthService $nativeHealth,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
 	) {
@@ -40,32 +42,30 @@ class ApiController extends Controller
 	#[NoCSRFRequired]
 	public function status(): JSONResponse
 	{
-		$enabled = $this->httpClient->isEnabled();
-		$sidecarOk = false;
+		$enabled = $this->appSettings->isDashboardEnabled();
+		$appVersion = $this->config->getAppValue(Application::APP_ID, 'installed_version', '');
+		$nativeOk = false;
 		$wgEasyOk = false;
-		$sidecarVersion = '';
+		$pollerOk = false;
+		$hostMetricsOk = false;
 		$health = null;
 
 		if ($this->isAdmin() && $enabled) {
-			$result = $this->httpClient->get('/api/health');
-			if ($result['ok'] && $result['body'] !== false) {
-				$health = json_decode((string) $result['body'], true);
-				if (is_array($health)) {
-					$sidecarOk = ($health['status'] ?? '') === 'ok';
-					$wgEasyOk = (bool) ($health['wg_easy'] ?? false);
-					$sidecarVersion = (string) ($health['version'] ?? '');
-				}
-			}
+			$health = $this->nativeHealth->getHealth($appVersion);
+			$nativeOk = ($health['status'] ?? '') === 'ok';
+			$wgEasyOk = (bool) ($health['wg_easy'] ?? false);
+			$pollerOk = (bool) ($health['poller'] ?? false);
+			$hostMetricsOk = (bool) ($health['host_metrics'] ?? false);
 		}
 
 		return new JSONResponse([
 			'app_id' => Application::APP_ID,
-			'version' => $this->config->getAppValue(Application::APP_ID, 'installed_version', ''),
+			'version' => $appVersion,
 			'enabled' => $enabled,
-			'sidecar_ok' => $sidecarOk,
+			'native_ok' => $nativeOk,
 			'wg_easy_ok' => $wgEasyOk,
-			'sidecar_version' => $sidecarVersion,
-			'upstream_url' => $this->httpClient->getBaseUrl(),
+			'poller_ok' => $pollerOk,
+			'host_metrics_ok' => $hostMetricsOk,
 			'wg_easy_admin_url' => $this->config->getAppValue(
 				Application::APP_ID,
 				'wg_easy_admin_url',

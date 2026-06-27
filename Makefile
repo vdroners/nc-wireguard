@@ -2,7 +2,7 @@ APP_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 NC_GCS_NM := /media/4TB/nc-gcs/apps/nc_gcs/node_modules
 export PATH := $(NC_GCS_NM)/.bin:$(PATH)
 
-.PHONY: build sync-theme deploy-docker health gate-local bump-patch lint test
+.PHONY: build sync-theme deploy-docker health gate-local bump-patch bump-minor bump-major lint test
 
 build: sync-theme
 	cd $(APP_ROOT) && npm run build
@@ -14,8 +14,8 @@ deploy-docker: build
 	bash $(APP_ROOT)/scripts/deploy-docker.sh
 
 health:
-	curl -sf http://127.0.0.1:8185/api/health | jq .
-	curl -sf http://127.0.0.1:8185/api/summary | jq '.connectedCount,.totalClients'
+	docker exec cloud_app php occ nc_wireguard:poll-metrics --no-lock || docker exec cloud_app php occ nc_wireguard:poll-metrics
+	docker exec cloud_app php /var/www/html/custom_apps/nc_wireguard/scripts/smoke-native.php
 
 gate-local:
 	bash $(APP_ROOT)/scripts/gate-local.sh
@@ -31,3 +31,6 @@ bump-patch:
 
 bump-minor:
 	@./scripts/bump-version.sh minor
+
+bump-major:
+	@./scripts/bump-version.sh major

@@ -2,64 +2,18 @@
 
 declare(strict_types=1);
 
-namespace OCA\NcWireguard\Service;
+namespace OCA\NcWireguard\Util;
 
-use OCA\NcWireguard\AppInfo\Application;
-use OCP\IConfig;
 use Psr\Log\LoggerInterface;
 
 /**
- * HTTP client helper for reaching wg-dashboard from cloud_app.
+ * Rewrites host.docker.internal when DNS fails inside cloud_app.
  */
-class DashboardHttpClient
+class DockerUrlResolver
 {
 	public function __construct(
-		private IConfig $config,
 		private LoggerInterface $logger,
 	) {
-	}
-
-	public function getBaseUrl(): string
-	{
-		$url = trim((string) $this->config->getAppValue(
-			Application::APP_ID,
-			'dashboard_internal_url',
-			'http://wg-dashboard:8185'
-		));
-		if ($url === '') {
-			$url = 'http://wg-dashboard:8185';
-		}
-		return $this->resolveHostDockerInternal($url);
-	}
-
-	public function getConnectTimeoutSeconds(): int
-	{
-		$raw = (int) $this->config->getAppValue(
-			Application::APP_ID,
-			'dashboard_proxy_connect_timeout',
-			'5'
-		);
-		return max(1, min(30, $raw));
-	}
-
-	public function getTimeoutSeconds(): int
-	{
-		$raw = (int) $this->config->getAppValue(
-			Application::APP_ID,
-			'dashboard_proxy_timeout',
-			'30'
-		);
-		return max(5, min(120, $raw));
-	}
-
-	public function isEnabled(): bool
-	{
-		$raw = trim((string) $this->config->getAppValue(
-			Application::APP_ID,
-			'dashboard_enabled',
-			'1'
-		));
-		return $raw === '1' || strtolower($raw) === 'true';
 	}
 
 	public function resolveHostDockerInternal(string $url): string
@@ -130,34 +84,5 @@ class DashboardHttpClient
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * @return array{ok: bool, http_code: int, body: string|false, error: string}
-	 */
-	public function get(string $urlPath, string $queryString = ''): array
-	{
-		$url = rtrim($this->getBaseUrl(), '/') . $urlPath;
-		if ($queryString !== '') {
-			$url .= '?' . $queryString;
-		}
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_TIMEOUT, $this->getTimeoutSeconds());
-		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->getConnectTimeoutSeconds());
-		curl_setopt($ch, CURLOPT_HTTPHEADER, [
-			'Accept: application/json',
-		]);
-		$body = curl_exec($ch);
-		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		$error = curl_error($ch);
-		curl_close($ch);
-		return [
-			'ok' => ($body !== false && $error === ''),
-			'http_code' => $httpCode,
-			'body' => $body,
-			'error' => $error,
-		];
 	}
 }

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
-use OCA\NcWireguard\Service\DashboardHttpClient;
+use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\WgEasyClient;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -20,7 +21,8 @@ class WgEasyReadProxyController extends Controller
 {
 	public function __construct(
 		IRequest $request,
-		private DashboardHttpClient $httpClient,
+		private AppSettings $appSettings,
+		private WgEasyClient $wgEasyClient,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
@@ -48,7 +50,7 @@ class WgEasyReadProxyController extends Controller
 			);
 		}
 
-		if (!$this->httpClient->isEnabled()) {
+		if (!$this->appSettings->isDashboardEnabled()) {
 			return new JSONResponse(
 				['message' => 'Disabled', 'reason' => 'disabled'],
 				Http::STATUS_SERVICE_UNAVAILABLE
@@ -59,20 +61,22 @@ class WgEasyReadProxyController extends Controller
 			return new JSONResponse(['message' => 'Invalid client id'], Http::STATUS_BAD_REQUEST);
 		}
 
-		$result = $this->httpClient->get('/api/wg/client/' . $clientId . '/configuration');
-		if (!$result['ok']) {
-			$this->logger->error('WgEasyReadProxy unreachable', ['clientId' => $clientId]);
+		$result = $this->wgEasyClient->getClientConfiguration($clientId);
+		if (!$result['ok'] || $result['body'] === false) {
+			$this->logger->error('wg-easy configuration fetch failed', [
+				'clientId' => $clientId,
+				'http_code' => $result['http_code'],
+			]);
 			return new JSONResponse(
-				['error' => 'Sidecar unreachable'],
-				Http::STATUS_BAD_GATEWAY
+				['error' => 'wg-easy configuration fetch failed'],
+				$result['http_code'] >= 400 ? $result['http_code'] : Http::STATUS_BAD_GATEWAY
 			);
 		}
 
-		$data = json_decode((string) $result['body'], true);
-		if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-			return new JSONResponse(['error' => 'Invalid response'], Http::STATUS_BAD_GATEWAY);
-		}
-
-		return new JSONResponse($data, $result['http_code'] ?: Http::STATUS_OK);
+		$data = $this->wgEasyClient->formatConfigurationBody(
+			(string) $result['body'],
+			$result['is_json']
+		);
+		return new JSONResponse($data);
 	}
 }

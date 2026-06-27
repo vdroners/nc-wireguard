@@ -1,6 +1,10 @@
 <template>
 	<div class="nc-wg-tab">
 		<ErrorBanner v-if="error" :message="error" @dismiss="error = ''" />
+		<ErrorBanner
+			v-if="systemUnavailableWarning"
+			:message="systemUnavailableWarning"
+			@dismiss="dismissSystemWarning = true" />
 		<HistoryToolbar
 			:time-value="hours"
 			:time-options="timeOptions"
@@ -28,6 +32,7 @@ import ErrorBanner from '../common/ErrorBanner.vue'
 import LoadingState from '../common/LoadingState.vue'
 import RateChart from '../common/RateChart.vue'
 import HistoryToolbar from '../HistoryToolbar.vue'
+import { summaryStore } from '../../composables/useDashboardSummary.js'
 
 export default {
 	name: 'SystemTab',
@@ -44,6 +49,7 @@ export default {
 			loading: false,
 			loaded: false,
 			coldStartHint: '',
+			dismissSystemWarning: false,
 			timeOptions: [
 				{ value: 1, label: '1 hour' },
 				{ value: 6, label: '6 hours' },
@@ -55,6 +61,16 @@ export default {
 	watch: {
 		active(val) {
 			if (val && !this.loaded) this.load()
+		},
+	},
+	computed: {
+		systemUnavailableWarning() {
+			if (this.dismissSystemWarning) return ''
+			const h = summaryStore.health
+			if (h?.host_metrics_ok === false) {
+				return 'Host system metrics unavailable — mount /host/proc in cloud_app or check poller (see docs/ops/host-proc-mount.md).'
+			}
+			return ''
 		},
 	},
 	methods: {
@@ -84,7 +100,7 @@ export default {
 					{ label: 'Tx', data: netTx, borderColor: '#fbbf24', backgroundColor: '#fbbf2433' },
 				]
 				this.coldStartHint = data.length < 2
-					? 'Collecting metrics — charts populate after ~60 seconds of sidecar polling.'
+					? 'Collecting metrics — charts populate after ~60 seconds of polling.'
 					: ''
 				this.loaded = true
 			} catch (e) {

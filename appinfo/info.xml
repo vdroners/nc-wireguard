@@ -4,8 +4,8 @@
 	<id>nc_wireguard</id>
 	<name>NC WireGuard</name>
 	<summary>WireGuard VPN server monitoring for wg-easy</summary>
-	<description><![CDATA[Monitor wg-easy VPN peers, bandwidth history, connection events, GeoIP map, and server metrics inside Nextcloud with NC-GCS theming. Admin-only access; proxies to the wg-dashboard sidecar.]]></description>
-	<version>1.1.0</version>
+	<description><![CDATA[Monitor wg-easy VPN peers, bandwidth history, connection events, GeoIP map, and server metrics inside Nextcloud with NC-GCS theming. Admin-only access; native metrics poller with wg-easy API integration.]]></description>
+	<version>2.0.0</version>
 	<licence>agpl</licence>
 	<author>Veteran Droners</author>
 	<namespace>NcWireguard</namespace>
@@ -22,8 +22,15 @@
 		</navigation>
 	</navigations>
 	<background-jobs>
-		<job>OCA\NcWireguard\BackgroundJob\SidecarWatchdogJob</job>
+		<job>OCA\NcWireguard\BackgroundJob\MetricsHealthJob</job>
 	</background-jobs>
+	<commands>
+		<command>OCA\NcWireguard\Command\SchemaCheckCommand</command>
+		<command>OCA\NcWireguard\Command\PollMetricsCommand</command>
+		<command>OCA\NcWireguard\Command\PruneMetricsCommand</command>
+		<command>OCA\NcWireguard\Command\ImportSidecarDbCommand</command>
+		<command>OCA\NcWireguard\Command\VerifyImportCommand</command>
+	</commands>
 	<settings>
 		<admin>OCA\NcWireguard\Settings\AdminSettings</admin>
 		<admin-section>OCA\NcWireguard\Settings\AdminSection</admin-section>
