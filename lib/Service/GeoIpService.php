@@ -70,8 +70,19 @@ class GeoIpService
 	 */
 	private function lookupRemote(string $ip): ?array
 	{
+		$provider = $this->settings->getGeoIpProvider();
+		$custom = $this->settings->getGeoIpCustomUrl();
+		$apiKey = $this->settings->getGeoIpApiKey();
 		$fields = 'status,country,countryCode,regionName,city,lat,lon,isp';
-		$url = 'http://ip-api.com/json/' . rawurlencode($ip) . '?fields=' . $fields;
+
+		if ($provider === 'custom' && $custom !== '') {
+			$url = str_replace(['{ip}', '{fields}'], [rawurlencode($ip), rawurlencode($fields)], $custom);
+		} elseif ($apiKey !== '') {
+			$url = 'https://pro.ip-api.com/json/' . rawurlencode($ip) . '?key=' . rawurlencode($apiKey) . '&fields=' . $fields;
+		} else {
+			// Free tier: HTTP only, non-commercial — opt-in via admin setting.
+			$url = 'http://ip-api.com/json/' . rawurlencode($ip) . '?fields=' . $fields;
+		}
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

@@ -1,5 +1,5 @@
 <template>
-	<NcGcsAppShell
+	<NcAppShell
 		:app-id="'nc_wireguard'"
 		title="NC WireGuard"
 		accent="#dc2626"
@@ -27,17 +27,21 @@
 			</div>
 		</template>
 		<WireGuardDashboard :enabled="enabled" :wg-easy-url="wgEasyUrl" />
-	</NcGcsAppShell>
+		<p class="nc-wg-disclaimer">
+			Not affiliated with or endorsed by WireGuard or wg-easy.
+			WireGuard is a registered trademark of Jason A. Donenfeld.
+		</p>
+	</NcAppShell>
 </template>
 
 <script>
-import NcGcsAppShell from '@/components/common/NcGcsAppShell.vue'
+import NcAppShell from './NcAppShell.vue'
 import WireGuardDashboard from './WireGuardDashboard.vue'
 import { summaryStore } from '../composables/useDashboardSummary.js'
 
 export default {
 	name: 'AppRoot',
-	components: { NcGcsAppShell, WireGuardDashboard },
+	components: { NcAppShell, WireGuardDashboard },
 	props: {
 		enabled: { type: Boolean, default: true },
 		wgEasyUrl: { type: String, default: '' },
@@ -48,10 +52,21 @@ export default {
 	computed: {
 		subtitle() {
 			const total = this.store.summary?.totalClients ?? this.store.clients.length
-			if (total > 0) {
-				return `vpn-vdroners.ddns.net · ${total} peer${total === 1 ? '' : 's'}`
+			if (this.wgEasyUrl) {
+				try {
+					const host = new URL(this.wgEasyUrl).host
+					if (total > 0) {
+						return `${host} · ${total} peer${total === 1 ? '' : 's'}`
+					}
+					return host
+				} catch {
+					// fall through
+				}
 			}
-			return 'VPN server monitoring'
+			if (total > 0) {
+				return `${total} peer${total === 1 ? '' : 's'}`
+			}
+			return 'VPN server monitoring (wg-easy)'
 		},
 		statusLine() {
 			const s = this.store.summary

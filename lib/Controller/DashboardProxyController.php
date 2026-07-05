@@ -11,7 +11,7 @@ use OCA\NcWireguard\Service\NativeHealthService;
 use OCA\NcWireguard\Service\PathSanitizer;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
-use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
@@ -49,7 +49,7 @@ class DashboardProxyController extends Controller
 	}
 
 	#[NoCSRFRequired]
-	#[NoAdminRequired]
+	#[AdminRequired]
 	public function proxy(string $path): Response
 	{
 		if (!$this->isAdmin()) {

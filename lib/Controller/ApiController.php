@@ -8,7 +8,7 @@ use OCA\NcWireguard\AppInfo\Application;
 use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\NativeHealthService;
 use OCP\AppFramework\Controller;
-use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
@@ -38,7 +38,7 @@ class ApiController extends Controller
 		return $this->groupManager->isAdmin($user->getUID());
 	}
 
-	#[NoAdminRequired]
+	#[AdminRequired]
 	#[NoCSRFRequired]
 	public function status(): JSONResponse
 	{
@@ -58,7 +58,7 @@ class ApiController extends Controller
 			$hostMetricsOk = (bool) ($health['host_metrics'] ?? false);
 		}
 
-		return new JSONResponse([
+		$payload = [
 			'app_id' => Application::APP_ID,
 			'version' => $appVersion,
 			'enabled' => $enabled,
@@ -66,13 +66,17 @@ class ApiController extends Controller
 			'wg_easy_ok' => $wgEasyOk,
 			'poller_ok' => $pollerOk,
 			'host_metrics_ok' => $hostMetricsOk,
-			'wg_easy_admin_url' => $this->config->getAppValue(
-				Application::APP_ID,
-				'wg_easy_admin_url',
-				'https://vpn-vdroners.ddns.net/'
-			),
 			'is_admin' => $this->isAdmin(),
 			'health' => $health,
-		]);
+		];
+		if ($this->isAdmin()) {
+			$payload['wg_easy_admin_url'] = trim((string) $this->config->getAppValue(
+				Application::APP_ID,
+				'wg_easy_admin_url',
+				'',
+			));
+		}
+
+		return new JSONResponse($payload);
 	}
 }

@@ -40,9 +40,12 @@ class AppSettings
 		$url = trim((string) $this->config->getAppValue(
 			Application::APP_ID,
 			'wg_easy_api_url',
-			'http://wg-easy:51821'
+			'',
 		));
-		return $url !== '' ? $this->urlResolver->resolveHostDockerInternal($url) : 'http://wg-easy:51821';
+		if ($url === '') {
+			return '';
+		}
+		return $this->urlResolver->resolveHostDockerInternal($url);
 	}
 
 	public function setWgEasyApiUrl(string $url): void
@@ -107,7 +110,43 @@ class AppSettings
 
 	public function isGeoIpEnabled(): bool
 	{
-		return $this->config->getAppValue(Application::APP_ID, 'geoip_enabled', '1') === '1';
+		return $this->config->getAppValue(Application::APP_ID, 'geoip_enabled', '0') === '1';
+	}
+
+	public function getGeoIpProvider(): string
+	{
+		$raw = trim((string) $this->config->getAppValue(Application::APP_ID, 'geoip_provider', 'ip_api'));
+		return in_array($raw, ['ip_api', 'custom'], true) ? $raw : 'ip_api';
+	}
+
+	public function setGeoIpProvider(string $provider): void
+	{
+		$this->config->setAppValue(Application::APP_ID, 'geoip_provider', $provider);
+	}
+
+	public function getGeoIpApiKey(): string
+	{
+		return $this->secrets->get('geoip_api_key');
+	}
+
+	public function setGeoIpApiKey(string $key): void
+	{
+		$this->secrets->set('geoip_api_key', $key);
+	}
+
+	public function isGeoIpApiKeyConfigured(): bool
+	{
+		return $this->secrets->isConfigured('geoip_api_key');
+	}
+
+	public function getGeoIpCustomUrl(): string
+	{
+		return trim((string) $this->config->getAppValue(Application::APP_ID, 'geoip_custom_url', ''));
+	}
+
+	public function setGeoIpCustomUrl(string $url): void
+	{
+		$this->config->setAppValue(Application::APP_ID, 'geoip_custom_url', trim($url));
 	}
 
 	public function setGeoIpEnabled(bool $enabled): void

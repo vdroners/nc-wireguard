@@ -4,18 +4,6 @@ const baseConfig = require('@nextcloud/webpack-vue-config')
 const webpack = require('webpack')
 const pkg = require('./package.json')
 
-const ncGcsSrc = resolveNcGcsSrcMirror(__dirname)
-const ncGcsNm = path.resolve(__dirname, '..', 'nc-gcs', 'apps', 'nc_gcs', 'node_modules')
-
-function resolveNcGcsSrcMirror(appRootDir) {
-	const fs = require('fs')
-	const mirror = path.join(appRootDir, 'src', '_nc_gcs_src_mirror')
-	if (fs.existsSync(path.join(mirror, 'router.js'))) {
-		return mirror
-	}
-	return path.resolve(appRootDir, '..', 'nc-gcs', 'apps', 'nc_gcs', 'src')
-}
-
 module.exports = merge(baseConfig, {
 	entry: {
 		main: path.resolve(__dirname, 'src', 'main.js'),
@@ -26,8 +14,7 @@ module.exports = merge(baseConfig, {
 	},
 	resolve: {
 		alias: {
-			'@': ncGcsSrc,
-			pinia: path.join(ncGcsNm, 'pinia'),
+			'@': path.resolve(__dirname, 'src'),
 		},
 	},
 	plugins: [

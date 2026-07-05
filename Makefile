@@ -1,30 +1,60 @@
-APP_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-NC_GCS_NM := /media/4TB/nc-gcs/apps/nc_gcs/node_modules
-export PATH := $(NC_GCS_NM)/.bin:$(PATH)
+APP_ID := nc_wireguard
+ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+VERSION := $(shell grep -oE '<version>[0-9]+\.[0-9]+\.[0-9]+</version>' "$(ROOT)appinfo/info.xml" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+STAGING := /tmp/$(APP_ID)-$(VERSION)
+TARBALL := /tmp/$(APP_ID)-$(VERSION).tar.gz
+CONTAINER ?= cloud_app
+REMOTE := /var/www/html/custom_apps/$(APP_ID)
 
-.PHONY: build sync-theme deploy-docker health gate-local bump-patch bump-minor bump-major lint test
+.PHONY: build deploy-docker health gate-local lint test appstore appstore-sign bump-patch bump-minor bump-major
 
-build: sync-theme
-	cd $(APP_ROOT) && npm run build
-
-sync-theme:
-	bash $(APP_ROOT)/scripts/sync-theme-from-nc-gcs.sh
+build:
+	cd $(ROOT) && npm run build
 
 deploy-docker: build
-	bash $(APP_ROOT)/scripts/deploy-docker.sh
+	bash $(ROOT)/scripts/deploy-docker.sh
 
 health:
 	docker exec cloud_app php occ nc_wireguard:poll-metrics --no-lock || docker exec cloud_app php occ nc_wireguard:poll-metrics
 	docker exec cloud_app php /var/www/html/custom_apps/nc_wireguard/scripts/smoke-native.php
 
 gate-local:
-	bash $(APP_ROOT)/scripts/gate-local.sh
+	bash $(ROOT)/scripts/gate-local.sh
 
 lint:
-	cd $(APP_ROOT) && npm run lint
+	cd $(ROOT) && npm run lint
 
 test:
-	cd $(APP_ROOT) && composer install --no-interaction && vendor/bin/phpunit -c phpunit.xml.dist
+	cd $(ROOT) && composer install --no-interaction && vendor/bin/phpunit -c phpunit.xml.dist
+
+# Assemble a self-contained release directory (built js/css + vendor, no node_modules).
+appstore: build
+	rm -rf "$(STAGING)"
+	mkdir -p "$(STAGING)"
+	rsync -a --delete \
+		--exclude node_modules --exclude tests --exclude .git --exclude .backups \
+		--exclude .phpunit.cache --exclude .phpunit.result.cache \
+		--exclude src/_nc_gcs_src_mirror \
+		"$(ROOT)" "$(STAGING)/"
+	cd "$(STAGING)" && composer install --no-dev --no-interaction --optimize-autoloader
+	rm -rf "$(STAGING)/node_modules"
+	tar -czf "$(TARBALL)" -C /tmp "$(APP_ID)-$(VERSION)"
+	@echo "Release tarball: $(TARBALL)"
+
+# Sign with Nextcloud occ (set NC_OCC and signing cert env vars — see docs/APPSTORE_ONBOARDING.md).
+appstore-sign: appstore
+	@test -n "$(NC_OCC)" || (echo "Set NC_OCC to your occ binary path" && exit 1)
+	@test -n "$$APP_PRIVATE_KEY" || (echo "Set APP_PRIVATE_KEY to private key file path" && exit 1)
+	@test -n "$$APP_PUBLIC_CRT" || (echo "Set APP_PUBLIC_CRT to certificate file path" && exit 1)
+	cp "$(ROOT)scripts/file_from_env.php" "$(STAGING)/file_from_env.php"
+	php "$(NC_OCC)" integrity:sign-app \
+		--privateKey="file://$(STAGING)/file_from_env.php" \
+		--certificate="file://$(STAGING)/file_from_env.php" \
+		$(APP_ID)
+	APP_PRIVATE_KEY="$$APP_PRIVATE_KEY" APP_PUBLIC_CRT="$$APP_PUBLIC_CRT" \
+	php "$(NC_OCC)" integrity:check-app $(APP_ID)
+	tar -czf "$(TARBALL)" -C /tmp "$(APP_ID)-$(VERSION)"
+	@echo "Signed tarball: $(TARBALL)"
 
 bump-patch:
 	@./scripts/bump-version.sh patch

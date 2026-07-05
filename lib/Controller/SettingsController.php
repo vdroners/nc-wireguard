@@ -10,13 +10,11 @@ use OCA\NcWireguard\Service\NativeHealthService;
 use OCA\NcWireguard\Service\WgEasyProbe;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
-use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
-use OCP\IGroupManager;
 use OCP\IRequest;
-use OCP\IUserSession;
 
 class SettingsController extends Controller
 {
@@ -26,53 +24,43 @@ class SettingsController extends Controller
 		private AppSettings $appSettings,
 		private NativeHealthService $nativeHealth,
 		private WgEasyProbe $wgEasyProbe,
-		private IGroupManager $groupManager,
-		private IUserSession $userSession,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
 
-	private function requireAdmin(): ?JSONResponse
-	{
-		$user = $this->userSession->getUser();
-		if (!$user || !$this->groupManager->isAdmin($user->getUID())) {
-			return new JSONResponse(['error' => 'Forbidden'], Http::STATUS_FORBIDDEN);
-		}
-		return null;
-	}
-
-	#[NoAdminRequired]
+	#[AdminRequired]
 	#[NoCSRFRequired]
 	public function getSettings(): JSONResponse
 	{
-		if ($deny = $this->requireAdmin()) {
-			return $deny;
-		}
 		return new JSONResponse([
 			'dashboard_enabled' => $this->appSettings->isDashboardEnabled(),
-			'wg_easy_admin_url' => $this->config->getAppValue(
+			'wg_easy_admin_url' => trim((string) $this->config->getAppValue(
 				Application::APP_ID,
 				'wg_easy_admin_url',
-				'https://vpn-vdroners.ddns.net/'
+				'',
+			)),
+			'wg_easy_api_url' => $this->config->getAppValue(
+				Application::APP_ID,
+				'wg_easy_api_url',
+				'',
 			),
-			'wg_easy_api_url' => $this->appSettings->getWgEasyApiUrl(),
 			'wg_easy_username' => $this->appSettings->getWgEasyUsername(),
 			'wg_easy_password_configured' => $this->appSettings->isWgEasyPasswordConfigured(),
 			'poll_interval_seconds' => $this->appSettings->getPollIntervalSeconds(),
 			'retention_days' => $this->appSettings->getRetentionDays(),
 			'geoip_enabled' => $this->appSettings->isGeoIpEnabled(),
+			'geoip_provider' => $this->appSettings->getGeoIpProvider(),
+			'geoip_api_key_configured' => $this->appSettings->isGeoIpApiKeyConfigured(),
+			'geoip_custom_url' => $this->appSettings->getGeoIpCustomUrl(),
 			'watchdog_enabled' => $this->appSettings->isWatchdogEnabled(),
 			'watchdog_interval_minutes' => $this->appSettings->getWatchdogIntervalMinutes(),
 		]);
 	}
 
-	#[NoAdminRequired]
+	#[AdminRequired]
 	#[NoCSRFRequired]
 	public function saveSettings(): JSONResponse
 	{
-		if ($deny = $this->requireAdmin()) {
-			return $deny;
-		}
 		$body = file_get_contents('php://input');
 		$data = json_decode((string) $body, true);
 		if (!is_array($data)) {
@@ -107,6 +95,15 @@ class SettingsController extends Controller
 		if (array_key_exists('geoip_enabled', $data)) {
 			$this->appSettings->setGeoIpEnabled((bool) $data['geoip_enabled']);
 		}
+		if (isset($data['geoip_provider'])) {
+			$this->appSettings->setGeoIpProvider((string) $data['geoip_provider']);
+		}
+		if (isset($data['geoip_api_key']) && (string) $data['geoip_api_key'] !== '') {
+			$this->appSettings->setGeoIpApiKey((string) $data['geoip_api_key']);
+		}
+		if (isset($data['geoip_custom_url'])) {
+			$this->appSettings->setGeoIpCustomUrl((string) $data['geoip_custom_url']);
+		}
 		if (array_key_exists('watchdog_enabled', $data)) {
 			$this->appSettings->setWatchdogEnabled((bool) $data['watchdog_enabled']);
 		}
@@ -117,13 +114,10 @@ class SettingsController extends Controller
 		return $this->getSettings();
 	}
 
-	#[NoAdminRequired]
+	#[AdminRequired]
 	#[NoCSRFRequired]
 	public function testConnection(): JSONResponse
 	{
-		if ($deny = $this->requireAdmin()) {
-			return $deny;
-		}
 		$appVersion = $this->config->getAppValue(Application::APP_ID, 'installed_version', '');
 		$health = $this->nativeHealth->getHealth($appVersion);
 		$ok = ($health['status'] ?? '') === 'ok';
@@ -139,13 +133,10 @@ class SettingsController extends Controller
 		]);
 	}
 
-	#[NoAdminRequired]
+	#[AdminRequired]
 	#[NoCSRFRequired]
 	public function testWgEasy(): JSONResponse
 	{
-		if ($deny = $this->requireAdmin()) {
-			return $deny;
-		}
 		$result = $this->wgEasyProbe->testSession();
 		if (!$result['ok']) {
 			return new JSONResponse([

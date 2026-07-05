@@ -53,6 +53,8 @@ export async function fetchDashboardSummary(isInitial = false) {
 		const status = e?.response?.status
 		if (status === 403) {
 			summaryStore.forbidden = true
+			stopSummaryPolling()
+			return
 		}
 		summaryStore.error = extractApiError(e)
 	} finally {

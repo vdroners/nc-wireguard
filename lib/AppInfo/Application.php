@@ -6,6 +6,8 @@ namespace OCA\NcWireguard\AppInfo;
 
 use OCA\NcGcs\Util\ThemeAssetLoader;
 use OCA\NcWireguard\Listener\CspListener;
+use OCA\NcWireguard\Listener\UninstallCleanupListener;
+use OCP\App\Events\AppUninstallEvent;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -26,6 +28,10 @@ class Application extends App implements IBootstrap
 		$context->registerEventListener(
 			AddContentSecurityPolicyEvent::class,
 			CspListener::class
+		);
+		$context->registerEventListener(
+			AppUninstallEvent::class,
+			UninstallCleanupListener::class
 		);
 	}
 

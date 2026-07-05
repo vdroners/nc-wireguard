@@ -19,6 +19,7 @@ class SecretCrypto
 	/** @var list<string> */
 	public const SECRET_KEYS = [
 		'wg_easy_password',
+		'geoip_api_key',
 	];
 
 	public function __construct(

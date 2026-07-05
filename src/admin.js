@@ -9,6 +9,7 @@ const AdminPanel = {
 		return {
 			settings: {},
 			wgEasyPassword: '',
+			geoipApiKey: '',
 			loading: true,
 			saving: false,
 			testing: false,
@@ -32,6 +33,7 @@ const AdminPanel = {
 				const { data } = await this.api('')
 				this.settings = data
 				this.wgEasyPassword = ''
+				this.geoipApiKey = ''
 			} catch (e) {
 				this.error = e?.response?.data?.error || e.message
 			} finally {
@@ -43,7 +45,11 @@ const AdminPanel = {
 			if (this.wgEasyPassword) {
 				body.wg_easy_password = this.wgEasyPassword
 			}
+			if (this.geoipApiKey) {
+				body.geoip_api_key = this.geoipApiKey
+			}
 			delete body.wg_easy_password_configured
+			delete body.geoip_api_key_configured
 			return body
 		},
 		async save() {
@@ -54,6 +60,7 @@ const AdminPanel = {
 				const { data } = await this.api('', { method: 'PUT', data: this.payloadForSave() })
 				this.settings = data
 				this.wgEasyPassword = ''
+				this.geoipApiKey = ''
 				this.message = 'Settings saved.'
 			} catch (e) {
 				this.error = e?.response?.data?.error || e.message
@@ -113,7 +120,17 @@ const AdminPanel = {
 			<input v-model.number="settings.poll_interval_seconds" type="number" min="10" max="300" class="nc-wg-input" />
 			<label>Retention (days)</label>
 			<input v-model.number="settings.retention_days" type="number" min="1" max="365" class="nc-wg-input" />
-			<label><input type="checkbox" v-model="settings.geoip_enabled" /> GeoIP lookups on connect</label>
+			<label><input type="checkbox" v-model="settings.geoip_enabled" /> GeoIP lookups on connect (off by default)</label>
+			<p class="muted">When enabled, peer public IPs may be sent to a GeoIP provider. ip-api.com free tier is HTTP-only and non-commercial; use a Pro API key or custom HTTPS endpoint for production.</p>
+			<label>GeoIP provider</label>
+			<select v-model="settings.geoip_provider" class="nc-wg-input">
+				<option value="ip_api">ip-api.com (default template)</option>
+				<option value="custom">Custom URL template</option>
+			</select>
+			<label>GeoIP API key (ip-api Pro — optional)</label>
+			<input v-model="geoipApiKey" type="password" class="nc-wg-input" autocomplete="new-password" placeholder="Leave blank to keep existing" />
+			<label>Custom GeoIP URL (use {ip} and {fields} placeholders)</label>
+			<input v-model="settings.geoip_custom_url" type="url" class="nc-wg-input" placeholder="https://example.com/geoip/{ip}?fields={fields}" />
 
 			<h3>Metrics health watchdog</h3>
 			<p class="muted">Background job logs stale polls and wg-easy failures (see Nextcloud log).</p>
@@ -131,6 +148,7 @@ const AdminPanel = {
 			<pre v-if="testResult" class="nc-wg-test-result">Native health: {{ JSON.stringify(testResult, null, 2) }}</pre>
 			<pre v-if="wgEasyTestResult" class="nc-wg-test-result">wg-easy: {{ JSON.stringify(wgEasyTestResult, null, 2) }}</pre>
 			<p><a :href="generateUrl('/apps/nc_wireguard/')">Open dashboard</a></p>
+			<p class="muted nc-wg-legal">Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.</p>
 		</div>
 		<p v-else>Loading…</p>
 	`,

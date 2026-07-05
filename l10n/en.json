@@ -1,0 +1,13 @@
+{
+	"NC WireGuard": "NC WireGuard",
+	"WireGuard dashboard disabled": "WireGuard dashboard disabled",
+	"Enable the dashboard in NC WireGuard admin settings.": "Enable the dashboard in NC WireGuard admin settings.",
+	"Administrators only": "Administrators only",
+	"WireGuard monitoring is restricted to Nextcloud administrators.": "WireGuard monitoring is restricted to Nextcloud administrators.",
+	"Overview": "Overview",
+	"Bandwidth": "Bandwidth",
+	"Connections": "Connections",
+	"Map": "Map",
+	"System": "System",
+	"NC WireGuard settings": "NC WireGuard settings"
+}

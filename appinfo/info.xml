@@ -3,15 +3,30 @@
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>nc_wireguard</id>
 	<name>NC WireGuard</name>
-	<summary>WireGuard VPN server monitoring for wg-easy</summary>
-	<description><![CDATA[Monitor wg-easy VPN peers, bandwidth history, connection events, GeoIP map, and server metrics inside Nextcloud with NC-GCS theming. Admin-only access; native metrics poller with wg-easy API integration.]]></description>
-	<version>2.0.1</version>
+	<summary>Monitor wg-easy VPN peers inside Nextcloud</summary>
+	<description><![CDATA[Monitor wg-easy VPN peers, bandwidth history, connection events, optional GeoIP map, and server metrics inside Nextcloud.
+
+Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.
+
+Optional NC-GCS theming when that app is installed; works standalone without NC-GCS. Admin-only access.]]></description>
+	<version>2.0.2</version>
 	<licence>agpl</licence>
-	<author>Veteran Droners</author>
+	<author mail="dan@19labs.com">19labs</author>
 	<namespace>NcWireguard</namespace>
 	<category>tools</category>
+	<website>https://github.com/vdroners/nc-wireguard</website>
+	<bugs>https://github.com/vdroners/nc-wireguard/issues</bugs>
+	<repository type="git">https://github.com/vdroners/nc-wireguard.git</repository>
+	<documentation>https://github.com/vdroners/nc-wireguard/blob/main/README.md</documentation>
+	<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/overview.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/map.png</screenshot>
 	<dependencies>
-		<nextcloud min-version="28" max-version="33"/>
+		<php min-version="8.1" max-version="8.4"/>
+		<database>sqlite</database>
+		<database>mysql</database>
+		<database>pgsql</database>
+		<lib>curl</lib>
+		<nextcloud min-version="28" max-version="34"/>
 	</dependencies>
 	<navigations>
 		<navigation>

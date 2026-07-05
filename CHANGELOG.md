@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.2] - 2026-07-04
+
+### App Store publication readiness
+
+- Decoupled frontend build from NC-GCS (local `NcAppShell`, webpack `@` → `src/`).
+- Neutralized org runtime defaults (empty wg-easy URLs).
+- GeoIP default **off**; configurable provider (ip-api Pro key or custom HTTPS URL).
+- Admin-only page and APIs; stop polling on 403; hide admin URL from non-admins.
+- WireGuard/wg-easy trademark disclaimer; root AGPL `LICENSE`.
+- l10n, store metadata, screenshots, uninstall drops `nc_wg_*` tables + appconfig.
+- Release automation: `make appstore`, CI + release GitHub workflows, operator onboarding doc.
+
 ## [2.0.1] - 2026-06-27
 
 ### Fixed

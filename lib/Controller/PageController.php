@@ -7,7 +7,7 @@ namespace OCA\NcWireguard\Controller;
 use OCA\NcWireguard\AppInfo\Application;
 use OCA\NcWireguard\Service\AppSettings;
 use OCP\AppFramework\Controller;
-use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IConfig;
@@ -24,7 +24,7 @@ class PageController extends Controller
 		parent::__construct(Application::APP_ID, $request);
 	}
 
-	#[NoAdminRequired]
+	#[AdminRequired]
 	#[NoCSRFRequired]
 	public function index(): TemplateResponse
 	{
@@ -32,11 +32,11 @@ class PageController extends Controller
 		Util::addStyle(Application::APP_ID, 'style');
 		return new TemplateResponse(Application::APP_ID, 'main', [
 			'enabled' => $this->appSettings->isDashboardEnabled(),
-			'wg_easy_admin_url' => $this->config->getAppValue(
+			'wg_easy_admin_url' => trim((string) $this->config->getAppValue(
 				Application::APP_ID,
 				'wg_easy_admin_url',
-				'https://vpn-vdroners.ddns.net/'
-			),
+				'',
+			)),
 		]);
 	}
 }

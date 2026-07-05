@@ -9,7 +9,7 @@ use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\WgEasyClient;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
-use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IGroupManager;
@@ -40,7 +40,7 @@ class WgEasyReadProxyController extends Controller
 	}
 
 	#[NoCSRFRequired]
-	#[NoAdminRequired]
+	#[AdminRequired]
 	public function configuration(int $clientId): JSONResponse
 	{
 		if (!$this->isAdmin()) {
