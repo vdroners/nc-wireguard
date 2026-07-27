@@ -12,7 +12,7 @@
 				<div class="stat-value text-green">{{ summary.connectedCount }}</div>
 			</div>
 			<div class="card p-4">
-				<div class="stat-label">Total Clients</div>
+				<div class="stat-label">Total Peers</div>
 				<div class="stat-value">{{ summary.totalClients }}</div>
 			</div>
 			<div class="card p-4">
@@ -39,14 +39,20 @@
 				type="search"
 				class="nc-wg-search"
 				placeholder="Filter by name or IP…"
-				aria-label="Filter clients">
+				aria-label="Filter peers">
+			<button type="button" class="nc-wg-btn nc-wg-btn--primary" @click="$emit('new-peer')">
+				New peer
+			</button>
 		</div>
 
 		<PeerCardList
 			v-if="summary && mobileLayout"
 			:clients="displayClients"
 			@select="$emit('show-config', $event)"
-			@config="$emit('show-config', $event)" />
+			@config="$emit('show-config', $event)"
+			@edit="$emit('edit-peer', $event)"
+			@toggle="$emit('toggle-peer', $event)"
+			@delete="$emit('delete-peer', $event)" />
 
 		<div v-if="summary && !mobileLayout" class="card nc-wg-table-wrap">
 			<div class="nc-wg-table-scroll">
@@ -54,7 +60,7 @@
 					<thead>
 						<tr>
 							<th class="nc-wg-sortable" @click="toggleSort('name')">
-								Client {{ sortIndicator('name') }}
+								Peer {{ sortIndicator('name') }}
 							</th>
 							<th>IP</th>
 							<th class="nc-wg-sortable" @click="toggleSort('status')">
@@ -67,7 +73,7 @@
 								Rx {{ sortIndicator('rx') }}
 							</th>
 							<th>Tx</th>
-							<th></th>
+							<th>Actions</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -75,8 +81,7 @@
 							<tr
 								:key="'row-' + c.id"
 								class="nc-wg-peer-row"
-								:class="peerRowClass(c)"
-								@click="$emit('show-config', c)">
+								:class="peerRowClass(c)">
 								<td>
 									{{ c.name }}
 									<span v-if="c.enabled === false" class="badge-muted badge-inline">Disabled</span>
@@ -87,11 +92,13 @@
 								<td class="muted">{{ timeAgo(c.latestHandshakeAt) }}</td>
 								<td class="text-sky">{{ fmtBytes(c.transferRx) }}</td>
 								<td class="text-amber">{{ fmtBytes(c.transferTx) }}</td>
-								<td>
-									<button
-										type="button"
-										class="nc-wg-btn nc-wg-btn--sm"
-										@click.stop="toggleExpand(c.id)">
+								<td class="nc-wg-peer-actions" @click.stop>
+									<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click="$emit('show-config', c)">Config</button>
+									<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click="$emit('edit-peer', c)">Edit</button>
+									<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click="$emit('toggle-peer', c)">
+										{{ c.enabled === false ? 'Enable' : 'Disable' }}
+									</button>
+									<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click="toggleExpand(c.id)">
 										{{ expandedId === c.id ? '▾' : '▸' }}
 									</button>
 								</td>
@@ -100,17 +107,18 @@
 								<td colspan="7">
 									<div class="nc-wg-peer-expand__grid">
 										<div><span class="muted">Endpoint</span> {{ c.endpoint || '—' }}</div>
-										<div><span class="muted">Enabled</span> {{ c.enabled ? 'Yes' : 'No' }}</div>
+										<div><span class="muted">Enabled</span> {{ c.enabled !== false ? 'Yes' : 'No' }}</div>
 										<div><span class="muted">Expires</span> {{ c.expiresAt ? fmtTime(c.expiresAt) : '—' }}</div>
-										<button type="button" class="nc-wg-btn nc-wg-btn--sm nc-wg-btn--primary" @click.stop="$emit('show-config', c)">
-											Config
+										<div><span class="muted">AllowedIPs</span> {{ formatList(c.allowedIps) }}</div>
+										<button type="button" class="nc-wg-btn nc-wg-btn--sm nc-wg-btn--danger" @click.stop="$emit('delete-peer', c)">
+											Delete
 										</button>
 									</div>
 								</td>
 							</tr>
 						</template>
 						<tr v-if="!displayClients.length">
-							<td colspan="7" class="nc-wg-empty">No clients match your filter.</td>
+							<td colspan="7" class="nc-wg-empty">No peers match your filter.</td>
 						</tr>
 					</tbody>
 				</table>
@@ -141,6 +149,7 @@ export default {
 		active: { type: Boolean, default: false },
 		mobileLayout: { type: Boolean, default: false },
 	},
+	emits: ['show-config', 'new-peer', 'edit-peer', 'toggle-peer', 'delete-peer'],
 	data() {
 		const saved = typeof sessionStorage !== 'undefined'
 			? sessionStorage.getItem(SORT_STORAGE_KEY)
@@ -185,6 +194,11 @@ export default {
 		timeAgo,
 		isExpiringSoon,
 		peerRowClass,
+		formatList(val) {
+			if (Array.isArray(val)) return val.join(', ') || '—'
+			if (val == null || val === '') return '—'
+			return String(val)
+		},
 		clearError() {
 			clearSummaryError()
 		},
@@ -225,3 +239,18 @@ export default {
 	},
 }
 </script>
+
+<style scoped>
+.nc-wg-overview-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: center;
+	margin: 0.75rem 0;
+}
+.nc-wg-peer-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+</style>

@@ -35,6 +35,51 @@ class AppSettings
 		$this->config->setAppValue(Application::APP_ID, 'dashboard_enabled', $enabled ? '1' : '0');
 	}
 
+	/**
+	 * Browser-reachable wg-easy UI base URL (empty when not published).
+	 *
+	 * Distinct from getWgEasyApiUrl(), which is the container-internal address
+	 * the poller uses and is not resolvable from an operator's browser.
+	 */
+	public function getWgEasyAdminUrl(): string
+	{
+		return rtrim(trim((string) $this->config->getAppValue(
+			Application::APP_ID,
+			'wg_easy_admin_url',
+			'',
+		)), '/');
+	}
+
+	public function setWgEasyAdminUrl(string $url): void
+	{
+		$this->config->setAppValue(Application::APP_ID, 'wg_easy_admin_url', trim($url));
+	}
+
+	/**
+	 * Hide the "open wg-easy" deep links in the dashboard.
+	 *
+	 * Defaults to enabled from v2.1: Nextcloud is the peer controller, and the
+	 * wg-easy admin UI is expected to be unpublished after cutover.
+	 */
+	public function isWgEasyAdminLinkHidden(): bool
+	{
+		$raw = trim((string) $this->config->getAppValue(
+			Application::APP_ID,
+			'hide_wg_easy_admin_link',
+			'1'
+		));
+		return $raw === '1' || strtolower($raw) === 'true';
+	}
+
+	public function setWgEasyAdminLinkHidden(bool $hidden): void
+	{
+		$this->config->setAppValue(
+			Application::APP_ID,
+			'hide_wg_easy_admin_link',
+			$hidden ? '1' : '0'
+		);
+	}
+
 	public function getWgEasyApiUrl(): string
 	{
 		$url = trim((string) $this->config->getAppValue(

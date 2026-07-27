@@ -4,9 +4,8 @@
 			v-for="c in clients"
 			:key="c.id"
 			class="nc-wg-peer-card card"
-			:class="peerRowClass(c)"
-			@click="$emit('select', c)">
-			<div class="nc-wg-peer-card__head">
+			:class="peerRowClass(c)">
+			<div class="nc-wg-peer-card__head" @click="$emit('select', c)">
 				<div>
 					<strong>{{ c.name }}</strong>
 					<span class="mono-xs muted">{{ c.ipv4Address }}</span>
@@ -22,22 +21,29 @@
 				<span class="text-amber">↑ {{ fmtBytes(c.transferTx) }}</span>
 				<span class="muted">{{ timeAgo(c.latestHandshakeAt) }}</span>
 			</div>
-			<button
-				type="button"
-				class="nc-wg-peer-card__expand nc-wg-btn nc-wg-btn--sm"
-				@click.stop="toggleExpand(c.id)">
-				{{ expandedId === c.id ? 'Less' : 'More' }}
-			</button>
+			<div class="nc-wg-peer-card__actions">
+				<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click.stop="$emit('config', c)">Config</button>
+				<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click.stop="$emit('edit', c)">Edit</button>
+				<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click.stop="$emit('toggle', c)">
+					{{ c.enabled === false ? 'Enable' : 'Disable' }}
+				</button>
+				<button
+					type="button"
+					class="nc-wg-peer-card__expand nc-wg-btn nc-wg-btn--sm"
+					@click.stop="toggleExpand(c.id)">
+					{{ expandedId === c.id ? 'Less' : 'More' }}
+				</button>
+			</div>
 			<div v-if="expandedId === c.id" class="nc-wg-peer-card__detail">
 				<div><span class="muted">Endpoint</span> {{ c.endpoint || '—' }}</div>
-				<div><span class="muted">Enabled</span> {{ c.enabled ? 'Yes' : 'No' }}</div>
+				<div><span class="muted">Enabled</span> {{ c.enabled !== false ? 'Yes' : 'No' }}</div>
 				<div><span class="muted">Expires</span> {{ c.expiresAt ? fmtTime(c.expiresAt) : '—' }}</div>
-				<button type="button" class="nc-wg-btn nc-wg-btn--sm nc-wg-btn--primary" @click.stop="$emit('config', c)">
-					Config
+				<button type="button" class="nc-wg-btn nc-wg-btn--sm nc-wg-btn--danger" @click.stop="$emit('delete', c)">
+					Delete
 				</button>
 			</div>
 		</div>
-		<div v-if="!clients.length" class="nc-wg-empty">No clients configured in wg-easy.</div>
+		<div v-if="!clients.length" class="nc-wg-empty">No VPN peers configured yet.</div>
 	</div>
 </template>
 
@@ -50,6 +56,7 @@ export default {
 	props: {
 		clients: { type: Array, default: () => [] },
 	},
+	emits: ['select', 'config', 'edit', 'toggle', 'delete'],
 	data() {
 		return { expandedId: null }
 	},
@@ -65,3 +72,12 @@ export default {
 	},
 }
 </script>
+
+<style scoped>
+.nc-wg-peer-card__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin-top: 0.5rem;
+}
+</style>

@@ -1,5 +1,58 @@
 # Changelog
 
+## [2.1.0] - 2026-07-27
+
+### Peer controller (monitor → controller)
+
+Nextcloud becomes the operator UI for wg-easy peers. Verified against
+`ghcr.io/wg-easy/wg-easy:15`; re-smoke the write paths on any wg-easy upgrade.
+
+### Added
+
+- `WgEasyClient` write methods: `createClient`, `updateClient`, `deleteClient`,
+  `enableClient`, `disableClient`, `generateOneTimeLink`, plus shared
+  request/re-login helpers and `TOTP_REQUIRED` detection on login
+- `PeerWriteController` — admin-only peer writes with **CSRF required** (no
+  `NoCSRFRequired` on any mutating route) and an audit log entry per action
+  (actor UID, action, client id, HTTP code)
+- `PeerFieldValidator` — name length, AllowedIPs CIDR list, DNS addresses, MTU
+  range and keepalive validation with per-field error messages
+- Routes: `POST /api/peers`, `POST|DELETE /api/peers/{id}`,
+  `POST /api/peers/{id}/enable|disable`, `POST /api/peers/{id}/one-time-link`,
+  `GET /api/peers/{id}/configuration`
+- `hide_wg_easy_admin_link` app setting (**defaults on**) so the dashboard hides
+  wg-easy deep links once Nextcloud owns peer management
+- `PeerFormModal.vue` — name, expiry, AllowedIPs, DNS, MTU, keepalive with
+  Field/site-GCS and Admin full-tunnel presets
+- Peer config modal: `.conf` download and one-time-link generation
+
+### Changed
+
+- `GET /api/wg-easy/{id}/configuration` is now an alias of
+  `GET /api/peers/{id}/configuration` and is kept for cached frontend bundles
+- Admin **Test wg-easy** reports a TOTP-enabled service account explicitly
+  instead of failing later with "client list fetch failed"
+- Operator-facing copy prefers "WireGuard server" / "VPN peers" over "wg-easy"
+
+### Notes
+
+- The wg-easy service account must keep 2FA **off** — wg-easy has no
+  non-interactive TOTP path for API sessions
+- Create requires `expiresAt` key (`null` = no expiry); NC always sends it
+- Field peers default AllowedIPs `10.0.0.0/24,10.8.0.0/24`, keepalive `25`, IPv4-only
+- Engine admin UI unpublished (`127.0.0.1:51821` break-glass; CPM `vpn-vdroners` disabled)
+- wg-easy's create schema accepts only `name` + `expiresAt`, so tunnel fields
+  are applied by a follow-up update; its update schema is not partial, so
+  updates read the peer first and send the full object
+- `POST /generateOneTimeLink` returns only `{success:true}`, and wg-easy's
+  single-client endpoint does not join the one-time-link table. The token is
+  therefore read back from the client **list**, where it is nested as
+  `oneTimeLink.oneTimeLink`; tokens carry a ~5 minute expiry and are erased on
+  first redeem
+- The NC redeem route (`GET /api/peers/otl/{token}`) is admin-gated like every
+  other write route, so it is not a link that can be handed to a non-admin
+  recipient — use the `.conf` download or QR for that
+
 ## [2.0.2] - 2026-07-04
 
 ### App Store publication readiness

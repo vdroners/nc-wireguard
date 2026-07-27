@@ -13,7 +13,15 @@
 | `GET …/api/dashboard/system` | `fetchSystem(params)` | NC admin |
 | `GET …/api/dashboard/health` | — | NC admin |
 | `GET /apps/nc_wireguard/api/status` | `fetchStatus()` | any logged-in user* |
-| `GET …/api/wg-easy/{id}/configuration` | `fetchPeerConfig(id)` | NC admin |
+| `GET …/api/peers/{id}/configuration` | `fetchPeerConfig(id)` | NC admin |
+| `GET …/api/wg-easy/{id}/configuration` | `fetchPeerConfig(id)` fallback | NC admin |
+| `POST …/api/peers` | `createPeer(body)` | NC admin + CSRF |
+| `POST …/api/peers/{id}` | `updatePeer(id, body)` | NC admin + CSRF |
+| `DELETE …/api/peers/{id}` | `deletePeer(id)` | NC admin + CSRF |
+| `POST …/api/peers/{id}/enable` | `enablePeer(id)` | NC admin + CSRF |
+| `POST …/api/peers/{id}/disable` | `disablePeer(id)` | NC admin + CSRF |
+| `POST …/api/peers/{id}/one-time-link` | `generatePeerOtl(id)` | NC admin + CSRF |
+| `GET …/api/peers/otl/{token}` | OTL redeem (`.conf` download) | NC admin |
 
 \* `/api/status` returns app metadata to all users; health fields are populated only when the caller is an NC admin and the dashboard is enabled.
 
@@ -233,6 +241,99 @@ If wg-easy returns JSON, the sidecar passes it through unchanged. Vue accepts `c
 | 502 | `{"error":"wg-easy configuration fetch failed"}` |
 
 Fixture (redacted success shape): [`tests/fixtures/sidecar/config.json`](../tests/fixtures/sidecar/config.json).
+
+---
+
+## Peer write API (v2.1)
+
+Admin-only **and** CSRF-protected — no mutating route carries `NoCSRFRequired`,
+so callers must send the Nextcloud request token (`@nextcloud/axios` does this
+automatically). Every request is audit-logged with actor UID, action, client id
+and upstream HTTP code.
+
+### Request body (create and update)
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `name` | `string` | Required on create; 1–128 chars, no control characters |
+| `expiresAt` | `string\|null` | `YYYY-MM-DD` or ISO-8601 date-time; `null` clears expiry |
+| `allowedIps` | `string\|string[]\|null` | CSV or array of CIDR entries; `null` = server default |
+| `dns` | `string\|string[]\|null` | CSV or array of IP addresses (hostnames rejected) |
+| `mtu` | `integer` | 1024–9000 |
+| `persistentKeepalive` | `integer` | 0–65535 seconds |
+
+Updates may send any subset; omitted fields keep their current value.
+
+### Errors
+
+| HTTP | Body | Cause |
+|------|------|-------|
+| 400 | `{"error":"Validation failed","reason":"validation_failed","fields":{…}}` | Per-field validation messages |
+| 401 | `{"message":"Current user is not logged in"}` | No Nextcloud session (verified) |
+| 403 | `{"message":"Forbidden","reason":"no_permission"}` | Non-admin |
+| 404 | `{"error":…,"reason":"not_found"}` | Unknown client id |
+| 412 | — | Missing/stale CSRF token (raised by Nextcloud before the controller) |
+| 422 | `{"error":…,"reason":"rejected"}` | wg-easy refused (e.g. enabling an expired peer) |
+| 502 | `{"error":…,"reason":"auth_failed"\|"totp_required"}` | wg-easy session unusable |
+| 503 | `{"message":"Disabled","reason":"disabled"}` | Dashboard disabled, or wg-easy URL unset |
+
+### One-time link
+
+`POST …/api/peers/{id}/one-time-link` →
+`{success, oneTimeLink, redeemPath, redeemUrl, expiresAt}`.
+
+| Field | Meaning |
+|-------|---------|
+| `oneTimeLink` | Raw wg-easy token, read back from the client list (see below) |
+| `redeemPath` | `/cnf/{token}` — wg-easy's own route, **unauthenticated** |
+| `redeemUrl` | Absolute NC route `GET …/api/peers/otl/{token}`, **admin-gated** |
+| `expiresAt` | Token expiry; wg-easy mints these with a ~5 minute TTL |
+
+Both redeem paths are single-use: wg-easy erases the token as soon as it serves
+the config.
+
+Because `redeemUrl` runs through `PeerWriteController::redeemOtl()` it inherits
+the same admin gate as every other write route, so it is **not** a link you can
+hand to a non-admin field user. It exists so an admin can pull the config
+without wg-easy being published. To hand a config to someone else, use the
+`.conf` download or QR from the peer config modal.
+
+---
+
+## wg-easy v15 upstream contract (verified)
+
+Read out of the running container's route table and zod schemas
+(`/app/server/chunks/…`) rather than assumed — the paths below are what this app
+targets. Re-verify on any wg-easy image bump.
+
+| Action | Method / path | Notes |
+|--------|---------------|-------|
+| Login | `POST /api/session` | `{username, password, remember}` |
+| List | `GET /api/client` | Includes `oneTimeLink`; omits `privateKey`/`preSharedKey` |
+| Get one | `GET /api/client/{id}` | **Excludes** `oneTimeLink`; includes secrets |
+| Create | `POST /api/client` | Accepts **only** `{name, expiresAt}` → `{success, clientId}` |
+| Update | `POST /api/client/{id}` | Full object; **not** partial |
+| Delete | `DELETE /api/client/{id}` | |
+| Enable / disable | `POST /api/client/{id}/enable\|disable` | Enabling an expired peer → 422 |
+| One-time link | `POST /api/client/{id}/generateOneTimeLink` | Returns `{success:true}` only |
+| Config | `GET /api/client/{id}/configuration` | `.conf` text |
+| OTL redeem | `GET /cnf/{token}` | wg-easy route, unauthenticated |
+
+Three consequences shape `WgEasyClient`:
+
+1. **Create cannot carry tunnel fields.** `allowedIps`, `dns`, `mtu` and
+   `persistentKeepalive` are applied by a follow-up update.
+2. **Update is read-modify-write.** `ClientUpdateSchema` has no `.partial()`, so
+   omitting a key is a 400. Updates fetch the peer, merge, then send every key.
+3. **The OTL token is not in the mint response.** It has to be read back from
+   the client list, where it appears as `oneTimeLink.oneTimeLink`.
+
+Field names are camelCase upstream: `allowedIps`, `persistentKeepalive`, `dns`,
+`mtu`, `ipv4Address`. `expiresAt` is nullable but **not optional** on create, so
+the key must always be present.
+
+Login has one further trap: a service account with 2FA gets **HTTP 200** with
+`{"status":"TOTP_REQUIRED"}`, not a 4xx. Status code alone cannot detect it.
 
 ---
 

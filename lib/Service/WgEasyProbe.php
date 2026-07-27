@@ -44,6 +44,15 @@ class WgEasyProbe
 			];
 		}
 
+		// wg-easy answers 200 with {"status":"TOTP_REQUIRED"} instead of an error
+		// code, so the body — not the status — decides whether the session cookie
+		// is usable. Without this the button reports a confusing "client list
+		// fetch failed" when the service account has 2FA enabled.
+		$totpError = $this->totpBlocker((string) $session['body']);
+		if ($totpError !== null) {
+			return ['ok' => false, 'http_code' => 200, 'error' => $totpError, 'client_count' => null];
+		}
+
 		$clients = $this->getWithCookies($url . '/api/client', $session['cookies']);
 		if (!$clients['ok']) {
 			return [
@@ -63,6 +72,20 @@ class WgEasyProbe
 			'error' => '',
 			'client_count' => $count,
 		];
+	}
+
+	/**
+	 * Operator-facing message when a 200 login body reports a TOTP challenge.
+	 */
+	private function totpBlocker(string $body): ?string
+	{
+		$data = json_decode($body, true);
+		$status = is_array($data) ? strtoupper((string) ($data['status'] ?? '')) : '';
+		return match ($status) {
+			'TOTP_REQUIRED' => 'wg-easy requires a TOTP code for this account — disable 2FA on the Nextcloud service account',
+			'INVALID_TOTP_CODE' => 'wg-easy rejected the TOTP code',
+			default => null,
+		};
 	}
 
 	/**

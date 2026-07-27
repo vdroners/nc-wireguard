@@ -10,7 +10,6 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
-use OCP\IConfig;
 use OCP\IRequest;
 use OCP\Util;
 
@@ -18,7 +17,6 @@ class PageController extends Controller
 {
 	public function __construct(
 		IRequest $request,
-		private IConfig $config,
 		private AppSettings $appSettings,
 	) {
 		parent::__construct(Application::APP_ID, $request);
@@ -32,11 +30,8 @@ class PageController extends Controller
 		Util::addStyle(Application::APP_ID, 'style');
 		return new TemplateResponse(Application::APP_ID, 'main', [
 			'enabled' => $this->appSettings->isDashboardEnabled(),
-			'wg_easy_admin_url' => trim((string) $this->config->getAppValue(
-				Application::APP_ID,
-				'wg_easy_admin_url',
-				'',
-			)),
+			'wg_easy_admin_url' => $this->appSettings->getWgEasyAdminUrl(),
+			'hide_wg_easy_admin_link' => $this->appSettings->isWgEasyAdminLinkHidden(),
 		]);
 	}
 }

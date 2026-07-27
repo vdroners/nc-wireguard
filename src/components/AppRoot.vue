@@ -17,16 +17,19 @@
 					Updated {{ store.lastUpdate }}
 				</span>
 				<a
-					v-if="wgEasyUrl"
+					v-if="wgEasyUrl && !hideWgEasy"
 					class="nc-wg-admin-link"
 					:href="wgEasyUrl"
 					target="_blank"
 					rel="noopener">
-					wg-easy admin
+					Engine admin
 				</a>
 			</div>
 		</template>
-		<WireGuardDashboard :enabled="enabled" :wg-easy-url="wgEasyUrl" />
+		<WireGuardDashboard
+			:enabled="enabled"
+			:wg-easy-url="hideWgEasy ? '' : wgEasyUrl"
+			:hide-wg-easy="hideWgEasy" />
 		<p class="nc-wg-disclaimer">
 			Not affiliated with or endorsed by WireGuard or wg-easy.
 			WireGuard is a registered trademark of Jason A. Donenfeld.
@@ -45,6 +48,7 @@ export default {
 	props: {
 		enabled: { type: Boolean, default: true },
 		wgEasyUrl: { type: String, default: '' },
+		hideWgEasy: { type: Boolean, default: true },
 	},
 	data() {
 		return { store: summaryStore }
@@ -52,21 +56,10 @@ export default {
 	computed: {
 		subtitle() {
 			const total = this.store.summary?.totalClients ?? this.store.clients.length
-			if (this.wgEasyUrl) {
-				try {
-					const host = new URL(this.wgEasyUrl).host
-					if (total > 0) {
-						return `${host} · ${total} peer${total === 1 ? '' : 's'}`
-					}
-					return host
-				} catch {
-					// fall through
-				}
-			}
 			if (total > 0) {
 				return `${total} peer${total === 1 ? '' : 's'}`
 			}
-			return 'VPN server monitoring (wg-easy)'
+			return 'WireGuard peer controller'
 		},
 		statusLine() {
 			const s = this.store.summary
@@ -82,11 +75,11 @@ export default {
 			const h = this.store.health
 			if (!h || !h.is_admin) return null
 			if (h.native_ok && h.wg_easy_ok) {
-				return { ok: true, text: 'Native OK · wg-easy OK' }
+				return { ok: true, text: 'Native OK · Engine OK' }
 			}
 			const parts = []
 			if (!h.poller_ok) parts.push('Poller stale')
-			if (!h.wg_easy_ok) parts.push('wg-easy down')
+			if (!h.wg_easy_ok) parts.push('Engine down')
 			return { ok: false, text: parts.join(' · ') || 'Native degraded' }
 		},
 	},

@@ -62,7 +62,9 @@ Only files **outside** `src/_nc_gcs_src_mirror/` are owned by this app. The mirr
 | Class | Role |
 |-------|------|
 | `DashboardProxyController` | Native dashboard routes: summary, bandwidth, connections, geoip, system, health |
-| `WgEasyReadProxyController` | Read-only peer WireGuard config via `WgEasyClient` |
+| `WgEasyReadProxyController` | Peer WireGuard config via `WgEasyClient` (`/api/peers/{id}/configuration`) |
+| `PeerWriteController` | Peer create / update / delete / enable / disable / one-time link (v2.1) |
+| `PeerFieldValidator` | Peer form input rules: name, AllowedIPs CIDR, DNS, MTU, keepalive |
 | `NativeDashboardService` | Builds dashboard JSON from MySQL mappers |
 | `NativeHealthService` | Aggregates poller heartbeat, wg-easy, host proc |
 | `MetricsPollService` | Poll loop: wg-easy clients → DB writes |
@@ -103,6 +105,11 @@ Built assets live in `js/` and `css/style.css` (generated; not committed).
 
 ## Security notes
 
-- No write access to wg-easy from NC app (read-only config fetch).
+- Peer writes (v2.1) are admin-only **and** CSRF-protected: no mutating route
+  carries `NoCSRFRequired`. Every write is audit-logged with the actor UID.
+- Peer private keys and full `.conf` bodies are never written to the log.
 - Path whitelist + traversal guard on `{path}` route parameter.
 - wg-easy credentials stored encrypted via `SecretCrypto`.
+- The wg-easy service account must keep 2FA off — wg-easy answers HTTP 200 with
+  `{"status":"TOTP_REQUIRED"}` and offers no non-interactive TOTP path, so a
+  2FA-enabled account cannot hold an API session.

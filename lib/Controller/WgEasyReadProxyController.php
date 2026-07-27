@@ -39,6 +39,19 @@ class WgEasyReadProxyController extends Controller
 		return $this->groupManager->isAdmin($user->getUID());
 	}
 
+	/**
+	 * v2.1 route naming (`/api/peers/{id}/configuration`).
+	 *
+	 * `configuration()` stays reachable at the legacy `/api/wg-easy/...` path so
+	 * older cached frontend bundles keep working across the upgrade.
+	 */
+	#[NoCSRFRequired]
+	#[AdminRequired]
+	public function peerConfiguration(int $clientId): JSONResponse
+	{
+		return $this->configuration($clientId);
+	}
+
 	#[NoCSRFRequired]
 	#[AdminRequired]
 	public function configuration(int $clientId): JSONResponse

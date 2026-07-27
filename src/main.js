@@ -12,10 +12,11 @@ if (!el) {
 } else {
 	const enabled = el.dataset.enabled !== '0'
 	const wgEasyUrl = el.dataset.wgEasyUrl || ''
+	const hideWgEasy = el.dataset.hideWgEasy === '1'
 
 	new Vue({
 		el,
 		pinia,
-		render: h => h(AppRoot, { props: { enabled, wgEasyUrl } }),
+		render: h => h(AppRoot, { props: { enabled, wgEasyUrl, hideWgEasy } }),
 	})
 }

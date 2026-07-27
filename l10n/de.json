@@ -1,13 +1,15 @@
 {
-	"NC WireGuard": "NC WireGuard",
-	"WireGuard dashboard disabled": "WireGuard-Dashboard deaktiviert",
-	"Enable the dashboard in NC WireGuard admin settings.": "Aktivieren Sie das Dashboard in den NC-WireGuard-Admin-Einstellungen.",
-	"Administrators only": "Nur Administratoren",
-	"WireGuard monitoring is restricted to Nextcloud administrators.": "WireGuard-Überwachung ist auf Nextcloud-Administratoren beschränkt.",
-	"Overview": "Übersicht",
-	"Bandwidth": "Bandbreite",
-	"Connections": "Verbindungen",
-	"Map": "Karte",
-	"System": "System",
-	"NC WireGuard settings": "NC-WireGuard-Einstellungen"
+	"translations": {
+		"NC WireGuard": "NC WireGuard",
+		"WireGuard dashboard disabled": "WireGuard-Dashboard deaktiviert",
+		"Enable the dashboard in NC WireGuard admin settings.": "Aktivieren Sie das Dashboard in den NC-WireGuard-Admin-Einstellungen.",
+		"Administrators only": "Nur Administratoren",
+		"WireGuard monitoring is restricted to Nextcloud administrators.": "WireGuard-Überwachung ist auf Nextcloud-Administratoren beschränkt.",
+		"Overview": "Übersicht",
+		"Bandwidth": "Bandbreite",
+		"Connections": "Verbindungen",
+		"Map": "Karte",
+		"System": "System",
+		"NC WireGuard settings": "NC-WireGuard-Einstellungen"
+	}
 }

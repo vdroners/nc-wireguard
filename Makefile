@@ -24,8 +24,15 @@ gate-local:
 lint:
 	cd $(ROOT) && npm run lint
 
+# PHP is not installed on the GCS host, so fall back to the composer image.
 test:
-	cd $(ROOT) && composer install --no-interaction && vendor/bin/phpunit -c phpunit.xml.dist
+	cd $(ROOT) && if command -v composer >/dev/null 2>&1; then \
+		composer install --no-interaction && vendor/bin/phpunit -c phpunit.xml.dist; \
+	else \
+		echo "composer not on PATH — running in the composer:2 container"; \
+		docker run --rm -v "$(ROOT):/app" -w /app composer:2 sh -c \
+			'composer install --no-interaction && vendor/bin/phpunit -c phpunit.xml.dist'; \
+	fi
 
 # Assemble a self-contained release directory (built js/css + vendor, no node_modules).
 appstore: build

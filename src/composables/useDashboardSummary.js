@@ -75,6 +75,11 @@ export async function loadAllDashboard(isInitial = false) {
 	await Promise.all([fetchDashboardSummary(isInitial), fetchDashboardHealth()])
 }
 
+/** Force an immediate summary refresh after peer write actions. */
+export function refreshSummaryNow() {
+	return loadAllDashboard(false)
+}
+
 export function startSummaryPolling() {
 	stopSummaryPolling()
 	loadAllDashboard(true)

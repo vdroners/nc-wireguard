@@ -121,11 +121,175 @@ if (!interface_exists(ISchemaWrapper::class)) {
 	}
 }
 
+namespace OCP\AppFramework\Bootstrap;
+
+if (!interface_exists(IRegistrationContext::class)) {
+	interface IRegistrationContext
+	{
+		public function registerEventListener(string $event, string $listener, int $priority = 0): void;
+	}
+}
+
+if (!interface_exists(IBootContext::class)) {
+	interface IBootContext
+	{
+		public function getAppContainer();
+	}
+}
+
+if (!interface_exists(IBootstrap::class)) {
+	interface IBootstrap
+	{
+		public function register(IRegistrationContext $context): void;
+		public function boot(IBootContext $context): void;
+	}
+}
+
+namespace OCP\AppFramework;
+
+if (!class_exists(Http::class)) {
+	class Http
+	{
+		public const STATUS_OK = 200;
+		public const STATUS_NO_CONTENT = 204;
+		public const STATUS_BAD_REQUEST = 400;
+		public const STATUS_UNAUTHORIZED = 401;
+		public const STATUS_FORBIDDEN = 403;
+		public const STATUS_NOT_FOUND = 404;
+		public const STATUS_PRECONDITION_FAILED = 412;
+		public const STATUS_UNPROCESSABLE_ENTITY = 422;
+		public const STATUS_INTERNAL_SERVER_ERROR = 500;
+		public const STATUS_BAD_GATEWAY = 502;
+		public const STATUS_SERVICE_UNAVAILABLE = 503;
+	}
+}
+
+if (!class_exists(Controller::class)) {
+	class Controller
+	{
+		public function __construct(protected string $appName, protected $request)
+		{
+		}
+	}
+}
+
+namespace OCP\AppFramework\Http;
+
+if (!class_exists(Response::class)) {
+	class Response
+	{
+		private int $status = 200;
+
+		public function setStatus(int $status): static
+		{
+			$this->status = $status;
+			return $this;
+		}
+
+		public function getStatus(): int
+		{
+			return $this->status;
+		}
+	}
+}
+
+if (!class_exists(JSONResponse::class)) {
+	class JSONResponse extends Response
+	{
+		public function __construct(private mixed $data = [], int $status = 200)
+		{
+			$this->setStatus($status);
+		}
+
+		public function getData(): mixed
+		{
+			return $this->data;
+		}
+	}
+}
+
+if (!class_exists(DataDownloadResponse::class)) {
+	class DataDownloadResponse extends Response
+	{
+		public function __construct(
+			private string $content = '',
+			private string $filename = '',
+			private string $contentType = '',
+		) {
+		}
+
+		public function getContent(): string
+		{
+			return $this->content;
+		}
+
+		public function getFilename(): string
+		{
+			return $this->filename;
+		}
+
+		public function getContentType(): string
+		{
+			return $this->contentType;
+		}
+	}
+}
+
+namespace OCP;
+
+if (!interface_exists(IRequest::class)) {
+	interface IRequest
+	{
+		public function getParam(string $key, $default = null);
+		public function getHeader(string $name): string;
+	}
+}
+
+if (!interface_exists(IUser::class)) {
+	interface IUser
+	{
+		public function getUID(): string;
+		public function getDisplayName(): string;
+	}
+}
+
+if (!interface_exists(IUserSession::class)) {
+	interface IUserSession
+	{
+		public function getUser();
+		public function isLoggedIn(): bool;
+	}
+}
+
+if (!interface_exists(IGroupManager::class)) {
+	interface IGroupManager
+	{
+		public function isAdmin(string $userId): bool;
+	}
+}
+
+if (!interface_exists(IURLGenerator::class)) {
+	interface IURLGenerator
+	{
+		public function linkToRoute(string $routeName, array $arguments = []): string;
+		public function linkToRouteAbsolute(string $routeName, array $arguments = []): string;
+		public function getAbsoluteURL(string $url): string;
+	}
+}
+
 namespace Psr\Log;
 
 if (!interface_exists(LoggerInterface::class)) {
 	interface LoggerInterface
 	{
+		public function emergency(string $message, array $context = []): void;
+		public function alert(string $message, array $context = []): void;
+		public function critical(string $message, array $context = []): void;
+		public function error(string $message, array $context = []): void;
 		public function warning(string $message, array $context = []): void;
+		public function notice(string $message, array $context = []): void;
+		public function info(string $message, array $context = []): void;
+		public function debug(string $message, array $context = []): void;
+		public function log($level, string $message, array $context = []): void;
 	}
 }

@@ -7,7 +7,7 @@
 		</div>
 		<div v-else-if="store.forbidden" class="nc-wg-forbidden card">
 			<h2>Administrators only</h2>
-			<p>WireGuard monitoring is restricted to Nextcloud administrators.</p>
+			<p>WireGuard peer control is restricted to Nextcloud administrators.</p>
 		</div>
 		<template v-else>
 			<TabBar
@@ -20,7 +20,11 @@
 				v-show="activeTab === 'overview'"
 				:active="activeTab === 'overview'"
 				:mobile-layout="mobileLayout"
-				@show-config="openConfig" />
+				@show-config="openConfig"
+				@new-peer="openForm(null)"
+				@edit-peer="openForm"
+				@toggle-peer="onTogglePeer"
+				@delete-peer="onDeletePeer" />
 			<BandwidthTab
 				v-show="activeTab === 'bandwidth'"
 				:active="activeTab === 'bandwidth'"
@@ -38,8 +42,15 @@
 				:open="configModal.open"
 				:client-id="configModal.clientId"
 				:client-name="configModal.clientName"
-				:wg-easy-url="wgEasyUrl"
-				@close="configModal.open = false" />
+				:wg-easy-url="hideWgEasy ? '' : wgEasyUrl"
+				@close="configModal.open = false"
+				@edit="onEditFromConfig" />
+			<PeerFormModal
+				:open="formModal.open"
+				:peer="formModal.peer"
+				@close="formModal.open = false"
+				@saved="onPeerSaved" />
+			<div v-if="actionToast" class="nc-wg-toast">{{ actionToast }}</div>
 		</template>
 	</div>
 </template>
@@ -53,11 +64,19 @@ import ConnectionsTab from './tabs/ConnectionsTab.vue'
 import MapTab from './tabs/MapTab.vue'
 import SystemTab from './tabs/SystemTab.vue'
 import PeerConfigModal from './common/PeerConfigModal.vue'
+import PeerFormModal from './common/PeerFormModal.vue'
+import {
+	enablePeer,
+	disablePeer,
+	deletePeer,
+	extractApiError,
+} from '../services/dashboard-api.js'
 import {
 	summaryStore,
 	startSummaryPolling,
 	stopSummaryPolling,
 	getConnectedCount,
+	refreshSummaryNow,
 } from '../composables/useDashboardSummary.js'
 
 const TAB_IDS = ['overview', 'bandwidth', 'connections', 'map', 'system']
@@ -73,10 +92,12 @@ export default {
 		MapTab,
 		SystemTab,
 		PeerConfigModal,
+		PeerFormModal,
 	},
 	props: {
 		enabled: { type: Boolean, default: true },
 		wgEasyUrl: { type: String, default: '' },
+		hideWgEasy: { type: Boolean, default: true },
 	},
 	data() {
 		const hash = (typeof window !== 'undefined' && window.location.hash.replace('#', '')) || 'overview'
@@ -91,9 +112,13 @@ export default {
 			],
 			activeTab: TAB_IDS.includes(hash) ? hash : 'overview',
 			configModal: { open: false, clientId: null, clientName: '' },
+			formModal: { open: false, peer: null },
 			mobileLayout: false,
 			geoCount: null,
 			resizeHandler: null,
+			actionToast: '',
+			toastTimer: null,
+			busyId: null,
 		}
 	},
 	computed: {
@@ -130,6 +155,7 @@ export default {
 		if (this.resizeHandler) {
 			window.removeEventListener('resize', this.resizeHandler)
 		}
+		if (this.toastTimer) clearTimeout(this.toastTimer)
 	},
 	methods: {
 		updateMobileLayout() {
@@ -145,11 +171,69 @@ export default {
 			const id = window.location.hash.replace('#', '')
 			if (TAB_IDS.includes(id)) this.activeTab = id
 		},
+		showToast(msg) {
+			this.actionToast = msg
+			if (this.toastTimer) clearTimeout(this.toastTimer)
+			this.toastTimer = setTimeout(() => { this.actionToast = '' }, 2500)
+		},
 		openConfig(client) {
 			this.configModal = {
 				open: true,
 				clientId: client.id,
 				clientName: client.name,
+			}
+		},
+		openForm(peer) {
+			this.formModal = { open: true, peer: peer || null }
+		},
+		onEditFromConfig() {
+			const id = this.configModal.clientId
+			const peer = (this.store.clients || []).find(c => c.id === id)
+			if (peer) {
+				this.configModal.open = false
+				this.openForm(peer)
+			}
+		},
+		async onPeerSaved() {
+			this.showToast('Peer saved')
+			await refreshSummaryNow()
+		},
+		async onTogglePeer(client) {
+			if (this.busyId) return
+			this.busyId = client.id
+			try {
+				if (client.enabled === false) {
+					await enablePeer(client.id)
+					this.showToast(`Enabled ${client.name}`)
+				} else {
+					await disablePeer(client.id)
+					this.showToast(`Disabled ${client.name}`)
+				}
+				await refreshSummaryNow()
+			} catch (e) {
+				this.showToast(extractApiError(e))
+			} finally {
+				this.busyId = null
+			}
+		},
+		async onDeletePeer(client) {
+			if (this.busyId) return
+			const ok = window.confirm(
+				`Delete peer "${client.name}"?\nPrefer Disable for field peers. This cannot be undone.`,
+			)
+			if (!ok) return
+			this.busyId = client.id
+			try {
+				await deletePeer(client.id)
+				this.showToast(`Deleted ${client.name}`)
+				if (this.configModal.clientId === client.id) {
+					this.configModal.open = false
+				}
+				await refreshSummaryNow()
+			} catch (e) {
+				this.showToast(extractApiError(e))
+			} finally {
+				this.busyId = null
 			}
 		},
 	},

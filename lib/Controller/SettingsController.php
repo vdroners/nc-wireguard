@@ -34,11 +34,8 @@ class SettingsController extends Controller
 	{
 		return new JSONResponse([
 			'dashboard_enabled' => $this->appSettings->isDashboardEnabled(),
-			'wg_easy_admin_url' => trim((string) $this->config->getAppValue(
-				Application::APP_ID,
-				'wg_easy_admin_url',
-				'',
-			)),
+			'wg_easy_admin_url' => $this->appSettings->getWgEasyAdminUrl(),
+			'hide_wg_easy_admin_link' => $this->appSettings->isWgEasyAdminLinkHidden(),
 			'wg_easy_api_url' => $this->config->getAppValue(
 				Application::APP_ID,
 				'wg_easy_api_url',
@@ -71,11 +68,10 @@ class SettingsController extends Controller
 			$this->appSettings->setDashboardEnabled((bool) $data['dashboard_enabled']);
 		}
 		if (isset($data['wg_easy_admin_url'])) {
-			$this->config->setAppValue(
-				Application::APP_ID,
-				'wg_easy_admin_url',
-				trim((string) $data['wg_easy_admin_url'])
-			);
+			$this->appSettings->setWgEasyAdminUrl((string) $data['wg_easy_admin_url']);
+		}
+		if (array_key_exists('hide_wg_easy_admin_link', $data)) {
+			$this->appSettings->setWgEasyAdminLinkHidden((bool) $data['hide_wg_easy_admin_link']);
 		}
 		if (isset($data['wg_easy_api_url'])) {
 			$this->appSettings->setWgEasyApiUrl((string) $data['wg_easy_api_url']);

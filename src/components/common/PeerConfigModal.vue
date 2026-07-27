@@ -15,14 +15,27 @@
 					<pre class="nc-wg-config-pre">{{ configText }}</pre>
 					<div class="nc-wg-modal__actions">
 						<button type="button" class="nc-wg-btn nc-wg-btn--primary" @click="copyConfig">Copy</button>
+						<button type="button" class="nc-wg-btn" @click="downloadConf">Download .conf</button>
+						<button type="button" class="nc-wg-btn" :disabled="otlBusy" @click="generateOtl">
+							{{ otlBusy ? 'Generating…' : 'One-time link' }}
+						</button>
+						<button type="button" class="nc-wg-btn" @click="$emit('edit')">Edit peer</button>
 						<a
 							v-if="wgEasyUrl"
 							class="nc-wg-admin-link"
 							:href="wgEasyUrl"
 							target="_blank"
 							rel="noopener">
-							Edit in wg-easy →
+							Engine admin →
 						</a>
+					</div>
+					<div v-if="otlUrl" class="nc-wg-otl">
+						<label class="muted">Admin redeem URL (NC login required — not for field users)</label>
+						<input class="nc-wg-input" type="text" readonly :value="otlUrl">
+						<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click="copyOtl">Copy link</button>
+						<p class="muted nc-wg-otl__hint">
+							For field install, use Download .conf or the QR above. This NC link only works while you are logged in as admin (~5 min TTL).
+						</p>
 					</div>
 				</div>
 			</div>
@@ -33,7 +46,11 @@
 
 <script>
 import QRCode from 'qrcode'
-import { fetchPeerConfig, extractApiError } from '../../services/dashboard-api.js'
+import {
+	fetchPeerConfig,
+	generatePeerOtl,
+	extractApiError,
+} from '../../services/dashboard-api.js'
 import ErrorBanner from './ErrorBanner.vue'
 import LoadingState from './LoadingState.vue'
 
@@ -46,6 +63,7 @@ export default {
 		clientName: { type: String, default: '' },
 		wgEasyUrl: { type: String, default: '' },
 	},
+	emits: ['close', 'edit'],
 	data() {
 		return {
 			loading: false,
@@ -56,11 +74,16 @@ export default {
 			toastTimer: null,
 			wideLayout: false,
 			resizeHandler: null,
+			otlUrl: '',
+			otlBusy: false,
 		}
 	},
 	watch: {
 		open(val) {
 			if (val && this.clientId) this.load()
+			if (!val) {
+				this.otlUrl = ''
+			}
 		},
 		clientId(val) {
 			if (this.open && val) this.load()
@@ -94,6 +117,7 @@ export default {
 			this.error = ''
 			this.configText = ''
 			this.qrDataUrl = ''
+			this.otlUrl = ''
 			try {
 				const data = await fetchPeerConfig(this.clientId)
 				const text = typeof data === 'string'
@@ -117,6 +141,62 @@ export default {
 				this.showToast('Copy failed')
 			}
 		},
+		downloadConf() {
+			const blob = new Blob([this.configText], { type: 'text/plain' })
+			const url = URL.createObjectURL(blob)
+			const a = document.createElement('a')
+			const safe = (this.clientName || 'peer').replace(/[^\w.-]+/g, '_')
+			a.href = url
+			a.download = `${safe}.conf`
+			document.body.appendChild(a)
+			a.click()
+			a.remove()
+			URL.revokeObjectURL(url)
+		},
+		async generateOtl() {
+			this.otlBusy = true
+			try {
+				const data = await generatePeerOtl(this.clientId)
+				this.otlUrl = data.redeemUrl || data.oneTimeLink || ''
+				if (!this.otlUrl && data.redeemPath) {
+					this.otlUrl = data.redeemPath
+				}
+				if (this.otlUrl) {
+					this.showToast('Admin OTL ready — use .conf/QR for field')
+				} else {
+					this.showToast('OTL generated but no URL returned')
+				}
+			} catch (e) {
+				this.error = extractApiError(e)
+			} finally {
+				this.otlBusy = false
+			}
+		},
+		async copyOtl() {
+			try {
+				await navigator.clipboard.writeText(this.otlUrl)
+				this.showToast('Link copied')
+			} catch (_) {
+				this.showToast('Copy failed')
+			}
+		},
 	},
 }
 </script>
+
+<style scoped>
+.nc-wg-otl {
+	margin-top: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+.nc-wg-otl__hint {
+	margin: 0;
+	font-size: 0.85rem;
+}
+.nc-wg-input {
+	padding: 0.4rem 0.5rem;
+	width: 100%;
+}
+</style>

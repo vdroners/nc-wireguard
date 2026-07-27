@@ -102,20 +102,22 @@ const AdminPanel = {
 	template: `
 		<div class="nc-wireguard-admin-panel" v-if="!loading">
 			<h2>NC WireGuard</h2>
-			<p class="muted">Native backend v2.0 — dashboard routes read from Nextcloud metrics tables populated by <code>occ nc_wireguard:poll-metrics</code>.</p>
+			<p class="muted">Native backend v2.1 — peer controller + metrics. Poller: <code>occ nc_wireguard:poll-metrics</code>. Engine UI is unpublished; use this app for CRUD.</p>
 
 			<h3>Dashboard</h3>
 			<label><input type="checkbox" v-model="settings.dashboard_enabled" /> Dashboard enabled</label>
-			<label>wg-easy admin URL (external UI link)</label>
+			<label>Engine admin URL (optional break-glass deep link)</label>
 			<input v-model="settings.wg_easy_admin_url" type="url" class="nc-wg-input" />
+			<label><input type="checkbox" v-model="settings.hide_wg_easy_admin_link" /> Hide engine admin link in dashboard (recommended)</label>
 
-			<h3>wg-easy API (poller)</h3>
-			<label>wg-easy API URL (internal)</label>
+			<h3>WireGuard engine API (poller + writes)</h3>
+			<label>Engine API URL (internal Docker)</label>
 			<input v-model="settings.wg_easy_api_url" type="url" class="nc-wg-input" />
-			<label>wg-easy username</label>
+			<label>Engine username</label>
 			<input v-model="settings.wg_easy_username" type="text" class="nc-wg-input" autocomplete="off" />
-			<label>wg-easy password <span v-if="settings.wg_easy_password_configured" class="muted">(configured — leave blank to keep)</span></label>
+			<label>Engine password <span v-if="settings.wg_easy_password_configured" class="muted">(configured — leave blank to keep)</span></label>
 			<input v-model="wgEasyPassword" type="password" class="nc-wg-input" autocomplete="new-password" />
+			<p class="muted">TOTP must stay <strong>off</strong> on the API service account.</p>
 			<label>Poll interval (seconds)</label>
 			<input v-model.number="settings.poll_interval_seconds" type="number" min="10" max="300" class="nc-wg-input" />
 			<label>Retention (days)</label>
