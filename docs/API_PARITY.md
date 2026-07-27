@@ -230,7 +230,7 @@ WireGuard `.conf` text wrapped when wg-easy returns plain text:
 { "configuration": "[Interface]\nPrivateKey = …\n…" }
 ```
 
-If wg-easy returns JSON, the sidecar passes it through unchanged. Vue accepts `configuration`, `config`, raw string, or pretty-printed JSON (`PeerConfigModal.vue`).
+If wg-easy returns JSON, NC passes it through unchanged. Vue accepts `configuration`, `config`, raw string, or pretty-printed JSON (`PeerConfigModal.vue`).
 
 ### Errors
 

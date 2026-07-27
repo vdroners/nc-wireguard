@@ -75,9 +75,9 @@ Version must stay in sync:
 - `CHANGELOG.md` → Keep a Changelog entry
 
 ```bash
-make bump-patch   # 2.0.0 → 2.0.1
-make bump-minor   # 2.0.0 → 2.1.0
-make bump-major   # 2.0.0 → 3.0.0
+make bump-patch   # 2.2.0 → 2.2.1
+make bump-minor   # 2.2.0 → 2.3.0
+make bump-major   # 2.2.0 → 3.0.0
 ```
 
 Then `make build`, update README badge if present, `make gate-local`.
@@ -87,8 +87,9 @@ Then `make build`, update README badge if present, `make gate-local`.
 1. `make lint test`
 2. `make gate-local` (or `SKIP_DEPLOY=1` then manual deploy)
 3. Browser smoke: all tabs at 375 / 768 / 1440 px, `#bandwidth` deep-link client filter, config modal copy toast
-4. `docker exec cloud_app grep '<version>' /var/www/html/custom_apps/nc_wireguard/appinfo/info.xml`
-5. Commit with scoped message; tag; push `main`
+4. `docker exec … smoke-peer-writes.php` and a public OTL curl without cookie
+5. `docker exec cloud_app grep '<version>' /var/www/html/custom_apps/nc_wireguard/appinfo/info.xml`
+6. Commit with scoped message; tag; push `main`
 
 ## Debugging
 

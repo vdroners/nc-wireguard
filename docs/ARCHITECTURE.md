@@ -6,9 +6,11 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │ Nextcloud (cloud_app)                                           │
 │  ┌──────────────────┐    ┌─────────────────────────────────┐  │
-│  │ Vue SPA          │───▶│ PHP native API (admin-only)     │  │
-│  │ WireGuardDashboard│    │ DashboardController              │  │
-│  │ + 5 tabs         │    │ WgEasyReadProxyController       │  │
+│  │ Vue SPA          │───▶│ PHP native API (admin-only*)    │  │
+│  │ WireGuardDashboard│    │ DashboardController             │  │
+│  │ + peer modals    │    │ PeerWriteController (+ public   │  │
+│  │ + 5 tabs         │    │   OTL redeem)                   │  │
+│  │                  │    │ WgEasyReadProxyController       │  │
 │  └──────────────────┘    └──────────────┬──────────────────┘  │
 │                                         │                       │
 │  ┌──────────────────────────────────────▼──────────────────┐  │
@@ -18,12 +20,14 @@
 └──────────────────────────────────────────│────────────────────┘
                                            │ HTTP (wireguard_default)
                                            ▼
-                              wg-easy (WireGuard UI + peers)
+                              wg-easy (engine only; UI unpublished)
 ```
+
+\* Dashboard / peer writes are admin-only. `GET …/api/peers/otl/{token}` is public (rate-limited, single-use).
 
 Public legacy URL `https://vpn-vdroners.ddns.net/dashboard/` was retired at cutover (2026-06-18). Operators use the NC app only.
 
-**v2.0.0** removed the wg-dashboard sidecar; all dashboard routes are served from NC MySQL tables populated by the native poller.
+**v2.0.0** removed the wg-dashboard sidecar; all dashboard routes are served from NC MySQL tables populated by the native poller. **v2.1** added peer writes; **v2.2** added public OTL redeem, bulk Field preset, and a read-only server defaults card.
 
 ## Frontend (`src/`)
 
@@ -63,21 +67,24 @@ Only files **outside** `src/_nc_gcs_src_mirror/` are owned by this app. The mirr
 |-------|------|
 | `DashboardController` | Native dashboard routes: summary, bandwidth, connections, geoip, system, health, server |
 | `WgEasyReadProxyController` | Peer WireGuard config via `WgEasyClient` (`/api/peers/{id}/configuration`) |
-| `PeerWriteController` | Peer create / update / delete / enable / disable / one-time link (v2.1) |
+| `PeerWriteController` | Peer CRUD + OTL mint (admin); public OTL redeem (v2.2) |
 | `PeerFieldValidator` | Peer form input rules: name, AllowedIPs CIDR, DNS, MTU, keepalive, ipv4, serverEndpoint |
+| `OtlRedeemRateLimiter` | Per-IP appconfig window for public OTL redeem |
+| `OtlRedeemTracker` | NC-side single-use token memory (complements wg-easy erase) |
 | `NativeDashboardService` | Builds dashboard JSON from MySQL mappers |
 | `NativeHealthService` | Aggregates poller heartbeat, wg-easy, host proc |
 | `MetricsPollService` | Poll loop: wg-easy clients → DB writes |
-| `WgEasyClient` | Session auth + REST calls to wg-easy |
+| `WgEasyClient` | Session auth + REST calls to wg-easy (incl. `getServerDefaults`) |
 | `HostProcCollector` | CPU/mem/disk/net from `/host/proc` or `/proc` |
 | `DockerUrlResolver` | Rewrites `host.docker.internal` when DNS fails in container |
 | `MetricsHealthJob` | Background job: stale poll / wg-easy failure logging |
 | `PathSanitizer` | Block path traversal on API segments |
 | `CspListener` | CSP allowances for maps/charts |
 
-Every dashboard API path checks **Nextcloud admin** before responding. Non-admins receive HTTP 403.
+Dashboard / peer-write API paths check **Nextcloud admin** before responding
+(except public OTL redeem). Non-admins receive HTTP 403.
 
-Allowed dashboard roots: `summary`, `bandwidth`, `connections`, `geoip`, `system`, `health`.
+Allowed dashboard roots: `summary`, `bandwidth`, `connections`, `geoip`, `system`, `health`, `server`.
 
 See [API_PARITY.md](API_PARITY.md) for response shapes.
 
