@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.2.0] - 2026-07-27
+
+### Added
+
+- **Public OTL redeem** — `GET /api/peers/otl/{token}` is `#[PublicPage]` +
+  `#[NoCSRFRequired]` with `OtlRedeemRateLimiter` (per-IP appconfig window)
+  and `OtlRedeemTracker` (NC-side single-use); mint stays admin+CSRF; config
+  modal prefers the shareable NC URL
+- Peer form **advanced** fields: optional `ipv4Address` + `serverEndpoint`
+  (validated in `PeerFieldValidator`); Overview expand shows IPv6 read-only
+- Overview **bulk Field preset** — multi-select + Apply Field preset
+  (`10.0.0.0/24,10.8.0.0/24`, keepalive 25); skips peer named `Server`
+- System tab **read-only server defaults** card via
+  `GET /api/dashboard/server` → wg-easy `/api/admin/general` +
+  `/api/admin/interface` (soft-fail; no write)
+- Checked-in plan `.cursor/plans/wg-2.2-gap-fill.md`
+
+### Changed
+
+- Renamed `DashboardProxyController` → `DashboardController` (HTTP path
+  `/api/dashboard/{path}` unchanged; route name `dashboard#proxy`)
+- Operator runbook / API_PARITY document public OTL, bulk Field policy, and
+  deferred server-write / Portainer scope
+
+### Notes
+
+- Server write / restart / hooks / Amnezia remain deferred (break-glass
+  loopback `127.0.0.1:51821`)
+- Portainer has no WireGuard surface on this host
+
 ## [2.1.0] - 2026-07-27
 
 ### Peer controller (monitor → controller)

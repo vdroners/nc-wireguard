@@ -94,6 +94,83 @@ class WgEasyClient
 	}
 
 	/**
+	 * Read-only wg-easy server defaults for the System tab (v2.2).
+	 *
+	 * Probes GET /api/admin/general and /api/admin/interface. Soft-fails when
+	 * the shape differs so the System tab still loads.
+	 *
+	 * @return array{
+	 *   ok: bool,
+	 *   unavailable?: bool,
+	 *   message?: string,
+	 *   host?: string|null,
+	 *   port?: int|null,
+	 *   mtu?: int|null,
+	 *   ipv4Cidr?: string|null,
+	 *   ipv6Cidr?: string|null,
+	 *   interfaceName?: string|null,
+	 *   device?: string|null,
+	 *   enabled?: bool|null,
+	 *   sessionTimeout?: int|null,
+	 *   defaultDns?: string|null,
+	 *   defaultAllowedIps?: string|null,
+	 *   defaultKeepalive?: int|null,
+	 *   notes?: list<string>
+	 * }
+	 */
+	public function getServerDefaults(): array
+	{
+		$general = $this->authedJson('GET', '/api/admin/general');
+		$iface = $this->authedJson('GET', '/api/admin/interface');
+
+		if ($iface['http_code'] !== 200 || !is_array($iface['json'])) {
+			return [
+				'ok' => false,
+				'unavailable' => true,
+				'message' => 'Server defaults unavailable — use break-glass loopback (127.0.0.1:51821) if needed.',
+			];
+		}
+
+		$if = $iface['json'];
+		$gen = is_array($general['json']) ? $general['json'] : [];
+
+		$host = null;
+		$adminUrl = $this->settings->getWgEasyAdminUrl();
+		if ($adminUrl !== '') {
+			$parts = parse_url($adminUrl);
+			$host = is_array($parts) && isset($parts['host']) ? (string) $parts['host'] : null;
+		}
+		if ($host === null || $host === '') {
+			$host = '127.0.0.1 (engine UI unpublished — break-glass only)';
+		}
+
+		$notes = [
+			'wg-easy v15 stores DNS / AllowedIPs / keepalive per peer, not as global defaults.',
+			'NC Field preset: AllowedIPs 10.0.0.0/24,10.8.0.0/24 · keepalive 25 · IPv4-only.',
+			'Server write / restart / hooks / Amnezia stay deferred — loopback engine UI for those.',
+		];
+
+		return [
+			'ok' => true,
+			'unavailable' => false,
+			'host' => $host,
+			'port' => isset($if['port']) ? (int) $if['port'] : null,
+			'mtu' => isset($if['mtu']) ? (int) $if['mtu'] : null,
+			'ipv4Cidr' => isset($if['ipv4Cidr']) ? (string) $if['ipv4Cidr'] : null,
+			'ipv6Cidr' => isset($if['ipv6Cidr']) ? (string) $if['ipv6Cidr'] : null,
+			'interfaceName' => isset($if['name']) ? (string) $if['name'] : null,
+			'device' => isset($if['device']) ? (string) $if['device'] : null,
+			'enabled' => array_key_exists('enabled', $if) ? (bool) $if['enabled'] : null,
+			'sessionTimeout' => isset($gen['sessionTimeout']) ? (int) $gen['sessionTimeout'] : null,
+			// Not exposed as globals on this engine build — left null on purpose.
+			'defaultDns' => null,
+			'defaultAllowedIps' => null,
+			'defaultKeepalive' => null,
+			'notes' => $notes,
+		];
+	}
+
+	/**
 	 * @param array{name: string, expiresAt?: string|null} $fields
 	 * @return array{ok: bool, http_code: int, clientId?: int, error?: string, code?: string, body?: mixed}
 	 */

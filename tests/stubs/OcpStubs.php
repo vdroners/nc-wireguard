@@ -159,6 +159,8 @@ if (!class_exists(Http::class)) {
 		public const STATUS_PRECONDITION_FAILED = 412;
 		public const STATUS_UNPROCESSABLE_ENTITY = 422;
 		public const STATUS_INTERNAL_SERVER_ERROR = 500;
+		public const STATUS_GONE = 410;
+		public const STATUS_TOO_MANY_REQUESTS = 429;
 		public const STATUS_BAD_GATEWAY = 502;
 		public const STATUS_SERVICE_UNAVAILABLE = 503;
 	}
@@ -179,6 +181,8 @@ if (!class_exists(Response::class)) {
 	class Response
 	{
 		private int $status = 200;
+		/** @var array<string, string> */
+		private array $headers = [];
 
 		public function setStatus(int $status): static
 		{
@@ -189,6 +193,18 @@ if (!class_exists(Response::class)) {
 		public function getStatus(): int
 		{
 			return $this->status;
+		}
+
+		public function addHeader($name, $value): static
+		{
+			$this->headers[(string) $name] = (string) $value;
+			return $this;
+		}
+
+		/** @return array<string, string> */
+		public function getHeaders(): array
+		{
+			return $this->headers;
 		}
 	}
 }
@@ -242,8 +258,34 @@ if (!interface_exists(IRequest::class)) {
 	{
 		public function getParam(string $key, $default = null);
 		public function getHeader(string $name): string;
+		public function getRemoteAddress(): string;
 	}
 }
+
+namespace OCP\AppFramework\Http\Attribute;
+
+if (!class_exists(AdminRequired::class)) {
+	#[\Attribute]
+	class AdminRequired
+	{
+	}
+}
+
+if (!class_exists(NoCSRFRequired::class)) {
+	#[\Attribute]
+	class NoCSRFRequired
+	{
+	}
+}
+
+if (!class_exists(PublicPage::class)) {
+	#[\Attribute]
+	class PublicPage
+	{
+	}
+}
+
+namespace OCP;
 
 if (!interface_exists(IUser::class)) {
 	interface IUser

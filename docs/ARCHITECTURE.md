@@ -7,7 +7,7 @@
 │ Nextcloud (cloud_app)                                           │
 │  ┌──────────────────┐    ┌─────────────────────────────────┐  │
 │  │ Vue SPA          │───▶│ PHP native API (admin-only)     │  │
-│  │ WireGuardDashboard│    │ DashboardProxyController        │  │
+│  │ WireGuardDashboard│    │ DashboardController              │  │
 │  │ + 5 tabs         │    │ WgEasyReadProxyController       │  │
 │  └──────────────────┘    └──────────────┬──────────────────┘  │
 │                                         │                       │
@@ -61,10 +61,10 @@ Only files **outside** `src/_nc_gcs_src_mirror/` are owned by this app. The mirr
 
 | Class | Role |
 |-------|------|
-| `DashboardProxyController` | Native dashboard routes: summary, bandwidth, connections, geoip, system, health |
+| `DashboardController` | Native dashboard routes: summary, bandwidth, connections, geoip, system, health, server |
 | `WgEasyReadProxyController` | Peer WireGuard config via `WgEasyClient` (`/api/peers/{id}/configuration`) |
 | `PeerWriteController` | Peer create / update / delete / enable / disable / one-time link (v2.1) |
-| `PeerFieldValidator` | Peer form input rules: name, AllowedIPs CIDR, DNS, MTU, keepalive |
+| `PeerFieldValidator` | Peer form input rules: name, AllowedIPs CIDR, DNS, MTU, keepalive, ipv4, serverEndpoint |
 | `NativeDashboardService` | Builds dashboard JSON from MySQL mappers |
 | `NativeHealthService` | Aggregates poller heartbeat, wg-easy, host proc |
 | `MetricsPollService` | Poll loop: wg-easy clients → DB writes |

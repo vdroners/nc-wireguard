@@ -18,13 +18,15 @@
 				@change="setTab" />
 			<OverviewTab
 				v-show="activeTab === 'overview'"
+				ref="overview"
 				:active="activeTab === 'overview'"
 				:mobile-layout="mobileLayout"
 				@show-config="openConfig"
 				@new-peer="openForm(null)"
 				@edit-peer="openForm"
 				@toggle-peer="onTogglePeer"
-				@delete-peer="onDeletePeer" />
+				@delete-peer="onDeletePeer"
+				@apply-field-preset="onApplyFieldPreset" />
 			<BandwidthTab
 				v-show="activeTab === 'bandwidth'"
 				:active="activeTab === 'bandwidth'"
@@ -69,7 +71,9 @@ import {
 	enablePeer,
 	disablePeer,
 	deletePeer,
+	updatePeer,
 	extractApiError,
+	PRESET_FIELD,
 } from '../services/dashboard-api.js'
 import {
 	summaryStore,
@@ -232,6 +236,49 @@ export default {
 				await refreshSummaryNow()
 			} catch (e) {
 				this.showToast(extractApiError(e))
+			} finally {
+				this.busyId = null
+			}
+		},
+		async onApplyFieldPreset(peers) {
+			if (this.busyId || !Array.isArray(peers) || !peers.length) return
+			const names = peers.map(p => p.name).join(', ')
+			const ok = window.confirm(
+				`Apply Field preset to ${peers.length} peer(s)?\n`
+				+ `AllowedIPs ${PRESET_FIELD.allowedIps}, keepalive ${PRESET_FIELD.persistentKeepalive}.\n`
+				+ `Skips peer named Server.\n\n${names}`,
+			)
+			if (!ok) return
+			this.busyId = 'bulk'
+			let okCount = 0
+			const fails = []
+			try {
+				for (const peer of peers) {
+					if (String(peer.name || '').trim().toLowerCase() === 'server') {
+						continue
+					}
+					try {
+						await updatePeer(peer.id, {
+							name: peer.name,
+							allowedIps: PRESET_FIELD.allowedIps,
+							persistentKeepalive: PRESET_FIELD.persistentKeepalive,
+							mtu: PRESET_FIELD.mtu,
+							dns: PRESET_FIELD.dns || null,
+						})
+						okCount++
+					} catch (e) {
+						fails.push(`${peer.name}: ${extractApiError(e)}`)
+					}
+				}
+				await refreshSummaryNow()
+				if (this.$refs.overview?.clearSelection) {
+					this.$refs.overview.clearSelection()
+				}
+				if (fails.length === 0) {
+					this.showToast(`Field preset applied to ${okCount} peer(s)`)
+				} else {
+					this.showToast(`Applied ${okCount}; failed ${fails.length}`)
+				}
 			} finally {
 				this.busyId = null
 			}

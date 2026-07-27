@@ -9,7 +9,7 @@
 Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.
 
 Optional NC-GCS theming when that app is installed; works standalone without NC-GCS. Admin-only access.]]></description>
-	<version>2.1.0</version>
+	<version>2.2.0</version>
 	<licence>agpl</licence>
 	<author mail="dan@19labs.com">19labs</author>
 	<namespace>NcWireguard</namespace>

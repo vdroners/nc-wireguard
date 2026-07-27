@@ -43,6 +43,13 @@
 			<button type="button" class="nc-wg-btn nc-wg-btn--primary" @click="$emit('new-peer')">
 				New peer
 			</button>
+			<button
+				type="button"
+				class="nc-wg-btn"
+				:disabled="selectedIds.length === 0"
+				@click="applyFieldPreset">
+				Apply Field preset ({{ selectedIds.length }})
+			</button>
 		</div>
 
 		<PeerCardList
@@ -59,6 +66,14 @@
 				<table class="nc-wg-table nc-wg-table--overview">
 					<thead>
 						<tr>
+							<th class="nc-wg-check-col">
+								<input
+									type="checkbox"
+									:checked="allSelectableChecked"
+									:indeterminate.prop="someSelectableChecked && !allSelectableChecked"
+									aria-label="Select all eligible peers"
+									@change="toggleSelectAll">
+							</th>
 							<th class="nc-wg-sortable" @click="toggleSort('name')">
 								Peer {{ sortIndicator('name') }}
 							</th>
@@ -82,6 +97,14 @@
 								:key="'row-' + c.id"
 								class="nc-wg-peer-row"
 								:class="peerRowClass(c)">
+								<td class="nc-wg-check-col" @click.stop>
+									<input
+										type="checkbox"
+										:disabled="isProtectedPeer(c)"
+										:checked="selectedIds.includes(c.id)"
+										:aria-label="'Select ' + (c.name || c.id)"
+										@change="toggleSelect(c)">
+								</td>
 								<td>
 									{{ c.name }}
 									<span v-if="c.enabled === false" class="badge-muted badge-inline">Disabled</span>
@@ -104,12 +127,13 @@
 								</td>
 							</tr>
 							<tr v-if="expandedId === c.id" :key="'exp-' + c.id" class="nc-wg-peer-expand">
-								<td colspan="7">
+								<td colspan="8">
 									<div class="nc-wg-peer-expand__grid">
 										<div><span class="muted">Endpoint</span> {{ c.endpoint || '—' }}</div>
 										<div><span class="muted">Enabled</span> {{ c.enabled !== false ? 'Yes' : 'No' }}</div>
 										<div><span class="muted">Expires</span> {{ c.expiresAt ? fmtTime(c.expiresAt) : '—' }}</div>
 										<div><span class="muted">AllowedIPs</span> {{ formatList(c.allowedIps) }}</div>
+										<div><span class="muted">IPv6</span> <span class="mono">{{ c.ipv6Address || '—' }}</span></div>
 										<button type="button" class="nc-wg-btn nc-wg-btn--sm nc-wg-btn--danger" @click.stop="$emit('delete-peer', c)">
 											Delete
 										</button>
@@ -118,7 +142,7 @@
 							</tr>
 						</template>
 						<tr v-if="!displayClients.length">
-							<td colspan="7" class="nc-wg-empty">No peers match your filter.</td>
+							<td colspan="8" class="nc-wg-empty">No peers match your filter.</td>
 						</tr>
 					</tbody>
 				</table>
@@ -149,7 +173,7 @@ export default {
 		active: { type: Boolean, default: false },
 		mobileLayout: { type: Boolean, default: false },
 	},
-	emits: ['show-config', 'new-peer', 'edit-peer', 'toggle-peer', 'delete-peer'],
+	emits: ['show-config', 'new-peer', 'edit-peer', 'toggle-peer', 'delete-peer', 'apply-field-preset'],
 	data() {
 		const saved = typeof sessionStorage !== 'undefined'
 			? sessionStorage.getItem(SORT_STORAGE_KEY)
@@ -169,6 +193,7 @@ export default {
 			sortKey,
 			sortDir,
 			expandedId: null,
+			selectedIds: [],
 		}
 	},
 	computed: {
@@ -187,6 +212,16 @@ export default {
 				: list
 			return filtered.sort((a, b) => this.compareClients(a, b))
 		},
+		selectableClients() {
+			return this.displayClients.filter(c => !this.isProtectedPeer(c))
+		},
+		allSelectableChecked() {
+			const ids = this.selectableClients.map(c => c.id)
+			return ids.length > 0 && ids.every(id => this.selectedIds.includes(id))
+		},
+		someSelectableChecked() {
+			return this.selectableClients.some(c => this.selectedIds.includes(c.id))
+		},
 	},
 	methods: {
 		fmtBytes,
@@ -194,6 +229,9 @@ export default {
 		timeAgo,
 		isExpiringSoon,
 		peerRowClass,
+		isProtectedPeer(c) {
+			return String(c?.name || '').trim().toLowerCase() === 'server'
+		},
 		formatList(val) {
 			if (Array.isArray(val)) return val.join(', ') || '—'
 			if (val == null || val === '') return '—'
@@ -204,6 +242,35 @@ export default {
 		},
 		toggleExpand(id) {
 			this.expandedId = this.expandedId === id ? null : id
+		},
+		toggleSelect(c) {
+			if (this.isProtectedPeer(c)) return
+			const id = c.id
+			if (this.selectedIds.includes(id)) {
+				this.selectedIds = this.selectedIds.filter(x => x !== id)
+			} else {
+				this.selectedIds = [...this.selectedIds, id]
+			}
+		},
+		toggleSelectAll(ev) {
+			const checked = ev?.target?.checked
+			const ids = this.selectableClients.map(c => c.id)
+			if (checked) {
+				const set = new Set([...this.selectedIds, ...ids])
+				this.selectedIds = [...set]
+			} else {
+				this.selectedIds = this.selectedIds.filter(id => !ids.includes(id))
+			}
+		},
+		applyFieldPreset() {
+			const peers = (this.summary?.clients || []).filter(
+				c => this.selectedIds.includes(c.id) && !this.isProtectedPeer(c),
+			)
+			if (!peers.length) return
+			this.$emit('apply-field-preset', peers)
+		},
+		clearSelection() {
+			this.selectedIds = []
 		},
 		sortIndicator(key) {
 			if (this.sortKey !== key) return ''
@@ -252,5 +319,9 @@ export default {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.25rem;
+}
+.nc-wg-check-col {
+	width: 2rem;
+	text-align: center;
 }
 </style>

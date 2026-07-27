@@ -1,6 +1,6 @@
 # NC WireGuard
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue)](appinfo/info.xml)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue)](appinfo/info.xml)
 
 Nextcloud app for monitoring a **wg-easy** VPN server with a native metrics poller. **Admin-only** access; optional NC-GCS theming when that app is installed; works standalone without NC-GCS.
 

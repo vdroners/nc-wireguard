@@ -6,11 +6,15 @@ namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
 use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\OtlRedeemRateLimiter;
+use OCA\NcWireguard\Service\OtlRedeemTracker;
 use OCA\NcWireguard\Service\PeerFieldValidator;
 use OCA\NcWireguard\Service\WgEasyClient;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IGroupManager;
@@ -20,7 +24,10 @@ use OCP\IURLGenerator;
 use Psr\Log\LoggerInterface;
 
 /**
- * Peer CRUD / OTL write surface for wg-easy (v2.1). CSRF required (no NoCSRFRequired).
+ * Peer CRUD / OTL write surface for wg-easy (v2.2).
+ *
+ * Mutating routes: admin + CSRF. Public OTL redeem: PublicPage + NoCSRFRequired
+ * with per-IP rate limit + NC-side single-use tracking (engine /cnf may be lenient).
  */
 class PeerWriteController extends Controller
 {
@@ -29,6 +36,8 @@ class PeerWriteController extends Controller
 		private AppSettings $appSettings,
 		private WgEasyClient $wgEasyClient,
 		private PeerFieldValidator $peerFieldValidator,
+		private OtlRedeemRateLimiter $otlRedeemRateLimiter,
+		private OtlRedeemTracker $otlRedeemTracker,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
 		private IURLGenerator $urlGenerator,
@@ -228,10 +237,10 @@ class PeerWriteController extends Controller
 		$token = $result['oneTimeLink'] ?? null;
 		$ncRedeem = null;
 		if (is_string($token) && $token !== '') {
-			$ncRedeem = $this->urlGenerator->linkToRouteAbsolute(
-				Application::APP_ID . '.peer_write.redeemOtl',
-				['token' => $token]
-			);
+			// linkToRoute can return empty in some CLI/proxy setups; build the
+			// public path explicitly so mint always yields a shareable URL.
+			$path = '/index.php/apps/' . Application::APP_ID . '/api/peers/otl/' . rawurlencode($token);
+			$ncRedeem = $this->urlGenerator->getAbsoluteURL($path);
 		}
 		return new JSONResponse([
 			'success' => true,
@@ -244,23 +253,55 @@ class PeerWriteController extends Controller
 	}
 
 	/**
-	 * Public one-shot redeem (no admin) — token is single-use on wg-easy.
-	 * Still requires a logged-in NC session via default middleware; use PublicPage if needed.
+	 * Public one-shot redeem — shareable with field users (no NC login).
+	 * Mint stays admin+CSRF; engine token is single-use (~5 min TTL).
 	 */
-	#[AdminRequired]
+	#[PublicPage]
+	#[NoCSRFRequired]
 	public function redeemOtl(string $token): DataDownloadResponse|JSONResponse
 	{
-		if ($resp = $this->gate()) {
+		if (!$this->appSettings->isDashboardEnabled()) {
+			return new JSONResponse(
+				['message' => 'Disabled', 'reason' => 'disabled'],
+				Http::STATUS_SERVICE_UNAVAILABLE
+			);
+		}
+
+		$ip = $this->request->getRemoteAddress();
+		$limit = $this->otlRedeemRateLimiter->attempt(is_string($ip) ? $ip : '');
+		if (!$limit['allowed']) {
+			$this->audit('otl_redeem_rate_limited', null, 429, [
+				'token_len' => strlen($token),
+				'retry_after' => $limit['retry_after'],
+			]);
+			$resp = new JSONResponse(
+				['error' => 'Too many redeem attempts', 'reason' => 'rate_limited'],
+				Http::STATUS_TOO_MANY_REQUESTS
+			);
+			$resp->addHeader('Retry-After', (string) $limit['retry_after']);
 			return $resp;
 		}
+
+		if ($this->otlRedeemTracker->wasRedeemed($token)) {
+			$this->audit('otl_redeem_replay', null, 410, ['token_len' => strlen($token)]);
+			return new JSONResponse(
+				['error' => 'One-time link already used', 'reason' => 'already_redeemed'],
+				Http::STATUS_GONE
+			);
+		}
+
 		$result = $this->wgEasyClient->redeemOneTimeLink($token);
-		$this->audit('otl_redeem', null, $result['http_code'], ['token_len' => strlen($token)]);
+		$this->audit('otl_redeem', null, $result['http_code'], [
+			'token_len' => strlen($token),
+			'public' => true,
+		]);
 		if (!$result['ok'] || $result['body'] === false) {
 			return new JSONResponse(
 				['error' => $result['error'] !== '' ? $result['error'] : 'redeem failed'],
 				$result['http_code'] >= 400 ? $result['http_code'] : Http::STATUS_BAD_GATEWAY
 			);
 		}
+		$this->otlRedeemTracker->markRedeemed($token);
 		return new DataDownloadResponse(
 			(string) $result['body'],
 			'peer.conf',

@@ -30,11 +30,11 @@
 						</a>
 					</div>
 					<div v-if="otlUrl" class="nc-wg-otl">
-						<label class="muted">Admin redeem URL (NC login required — not for field users)</label>
+						<label class="muted">Shareable one-time link (no NC login — ~5 min, single use)</label>
 						<input class="nc-wg-input" type="text" readonly :value="otlUrl">
 						<button type="button" class="nc-wg-btn nc-wg-btn--sm" @click="copyOtl">Copy link</button>
 						<p class="muted nc-wg-otl__hint">
-							For field install, use Download .conf or the QR above. This NC link only works while you are logged in as admin (~5 min TTL).
+							Send this URL to the field user. Prefer Download .conf or QR as a backup if the link expires.
 						</p>
 					</div>
 				</div>
@@ -162,7 +162,7 @@ export default {
 					this.otlUrl = data.redeemPath
 				}
 				if (this.otlUrl) {
-					this.showToast('Admin OTL ready — use .conf/QR for field')
+					this.showToast('Shareable OTL ready (~5 min)')
 				} else {
 					this.showToast('OTL generated but no URL returned')
 				}

@@ -29,6 +29,11 @@ export async function fetchSystem(params = {}) {
 	return data
 }
 
+export async function fetchServerDefaults() {
+	const { data } = await axios.get(`${base()}/server`)
+	return data
+}
+
 export async function fetchStatus() {
 	const { data } = await axios.get(generateUrl('/apps/nc_wireguard/api/status'))
 	return data

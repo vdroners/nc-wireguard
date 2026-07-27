@@ -12,6 +12,7 @@
 | `GET …/api/dashboard/geoip` | `fetchGeoip()` | NC admin |
 | `GET …/api/dashboard/system` | `fetchSystem(params)` | NC admin |
 | `GET …/api/dashboard/health` | — | NC admin |
+| `GET …/api/dashboard/server` | `fetchServerDefaults()` | NC admin (read-only) |
 | `GET /apps/nc_wireguard/api/status` | `fetchStatus()` | any logged-in user* |
 | `GET …/api/peers/{id}/configuration` | `fetchPeerConfig(id)` | NC admin |
 | `GET …/api/wg-easy/{id}/configuration` | `fetchPeerConfig(id)` fallback | NC admin |
@@ -21,11 +22,11 @@
 | `POST …/api/peers/{id}/enable` | `enablePeer(id)` | NC admin + CSRF |
 | `POST …/api/peers/{id}/disable` | `disablePeer(id)` | NC admin + CSRF |
 | `POST …/api/peers/{id}/one-time-link` | `generatePeerOtl(id)` | NC admin + CSRF |
-| `GET …/api/peers/otl/{token}` | OTL redeem (`.conf` download) | NC admin |
+| `GET …/api/peers/otl/{token}` | OTL redeem (`.conf` download) | **Public** (rate-limited) |
 
 \* `/api/status` returns app metadata to all users; health fields are populated only when the caller is an NC admin and the dashboard is enabled.
 
-Whitelist (`DashboardProxyController`): `summary`, `bandwidth`, `connections`, `geoip`, `system`, `health`.
+Whitelist (`DashboardController`): `summary`, `bandwidth`, `connections`, `geoip`, `system`, `health`, `server`.
 
 ---
 
@@ -286,17 +287,16 @@ Updates may send any subset; omitted fields keep their current value.
 |-------|---------|
 | `oneTimeLink` | Raw wg-easy token, read back from the client list (see below) |
 | `redeemPath` | `/cnf/{token}` — wg-easy's own route, **unauthenticated** |
-| `redeemUrl` | Absolute NC route `GET …/api/peers/otl/{token}`, **admin-gated** |
+| `redeemUrl` | Absolute NC route `GET …/api/peers/otl/{token}`, **public** (rate-limited) |
 | `expiresAt` | Token expiry; wg-easy mints these with a ~5 minute TTL |
 
 Both redeem paths are single-use: wg-easy erases the token as soon as it serves
 the config.
 
-Because `redeemUrl` runs through `PeerWriteController::redeemOtl()` it inherits
-the same admin gate as every other write route, so it is **not** a link you can
-hand to a non-admin field user. It exists so an admin can pull the config
-without wg-easy being published. To hand a config to someone else, use the
-`.conf` download or QR from the peer config modal.
+Because `redeemUrl` is `#[PublicPage]` + `#[NoCSRFRequired]` with a per-IP
+appconfig rate limit, it **is** a link you can hand to a field user. Minting
+stays admin+CSRF. Keep the `.conf` download or QR as a backup if the token
+expires before redeem.
 
 ---
 

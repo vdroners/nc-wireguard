@@ -182,4 +182,25 @@ final class PeerFieldValidatorTest extends TestCase
 		], true);
 		self::assertSame(['name' => 'peer'], $result['fields']);
 	}
+
+	public function testIpv4AddressAndServerEndpoint(): void
+	{
+		$ok = $this->validator->validate([
+			'ipv4Address' => '10.8.0.10',
+			'serverEndpoint' => 'vpn.example.com:51820',
+		], false);
+		self::assertSame([], $ok['errors']);
+		self::assertSame('10.8.0.10', $ok['fields']['ipv4Address']);
+		self::assertSame('vpn.example.com:51820', $ok['fields']['serverEndpoint']);
+
+		$badIp = $this->validator->validate(['ipv4Address' => 'not-an-ip'], false);
+		self::assertArrayHasKey('ipv4Address', $badIp['errors']);
+
+		$badEp = $this->validator->validate(['serverEndpoint' => 'no-port'], false);
+		self::assertArrayHasKey('serverEndpoint', $badEp['errors']);
+
+		$clear = $this->validator->validate(['serverEndpoint' => ''], false);
+		self::assertSame([], $clear['errors']);
+		self::assertNull($clear['fields']['serverEndpoint']);
+	}
 }

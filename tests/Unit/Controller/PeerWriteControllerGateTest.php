@@ -6,6 +6,8 @@ namespace OCA\NcWireguard\Tests\Unit\Controller;
 
 use OCA\NcWireguard\Controller\PeerWriteController;
 use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\OtlRedeemRateLimiter;
+use OCA\NcWireguard\Service\OtlRedeemTracker;
 use OCA\NcWireguard\Service\PeerFieldValidator;
 use OCA\NcWireguard\Service\WgEasyClient;
 use OCP\IGroupManager;
@@ -48,6 +50,8 @@ final class PeerWriteControllerGateTest extends TestCase
 			$settings,
 			$this->createMock(WgEasyClient::class),
 			$this->createMock(PeerFieldValidator::class),
+			$this->createMock(OtlRedeemRateLimiter::class),
+			$this->createMock(OtlRedeemTracker::class),
 			$groups,
 			$session,
 			$this->createMock(IURLGenerator::class),

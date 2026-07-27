@@ -63,7 +63,7 @@ SKIP_DEPLOY=1 make gate-local
 
 - `declare(strict_types=1);` on all PHP files.
 - Admin check before any dashboard API response.
-- New dashboard paths: add to `DashboardProxyController` whitelist **and** [API_PARITY.md](API_PARITY.md).
+- New dashboard paths: add to `DashboardController` whitelist **and** [API_PARITY.md](API_PARITY.md).
 - Unit tests in `tests/Unit/` for sanitizers and pure logic.
 
 ## Version bump

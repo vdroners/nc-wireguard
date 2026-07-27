@@ -9,6 +9,7 @@ use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\NativeDashboardService;
 use OCA\NcWireguard\Service\NativeHealthService;
 use OCA\NcWireguard\Service\PathSanitizer;
+use OCA\NcWireguard\Service\WgEasyClient;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
@@ -22,15 +23,19 @@ use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 /**
- * Native dashboard API (summary, bandwidth, connections, geoip, system, health).
+ * Native dashboard API (summary, bandwidth, connections, geoip, system, health, server).
+ *
+ * Renamed from DashboardProxyController in v2.2 (sidecar proxy is gone).
+ * HTTP path stays /api/dashboard/{path}.
  */
-class DashboardProxyController extends Controller
+class DashboardController extends Controller
 {
 	public function __construct(
 		IRequest $request,
 		private AppSettings $appSettings,
 		private NativeDashboardService $nativeDashboard,
 		private NativeHealthService $nativeHealth,
+		private WgEasyClient $wgEasyClient,
 		private IConfig $config,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
@@ -73,7 +78,7 @@ class DashboardProxyController extends Controller
 		}
 
 		if (PathSanitizer::hasTraversalAttempt($path)) {
-			$this->logger->warning('DashboardProxyController blocked traversal', [
+			$this->logger->warning('DashboardController blocked traversal', [
 				'path' => $path,
 				'actor' => $this->userSession->getUser()?->getUID() ?? '-',
 			]);
@@ -84,7 +89,7 @@ class DashboardProxyController extends Controller
 		}
 
 		$safePath = PathSanitizer::normalize($path);
-		$allowed = ['summary', 'bandwidth', 'connections', 'geoip', 'system', 'health'];
+		$allowed = ['summary', 'bandwidth', 'connections', 'geoip', 'system', 'health', 'server'];
 		$root = explode('/', $safePath)[0] ?? '';
 		if (!in_array($root, $allowed, true)) {
 			return new JSONResponse(
@@ -128,6 +133,10 @@ class DashboardProxyController extends Controller
 
 			case 'health':
 				return new JSONResponse($this->nativeHealth->getHealth($appVersion));
+
+			case 'server':
+				// Read-only engine defaults — never write from NC in v2.2.
+				return new JSONResponse($this->wgEasyClient->getServerDefaults());
 
 			default:
 				return new JSONResponse(

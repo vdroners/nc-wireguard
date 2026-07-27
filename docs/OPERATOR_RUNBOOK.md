@@ -28,14 +28,27 @@ explicitly instead of reporting a generic client-list failure.
 engine expires it about **5 minutes** after generation, and redeeming it (either
 path) erases it immediately, so mint it at the moment you need it.
 
-The returned **NC redeem URL** (`/apps/nc_wireguard/api/peers/otl/{token}`) runs
-through the same admin gate as the other write routes. That makes it a
-convenience for *you* — it pulls the config through Nextcloud while the engine UI
-stays unpublished — but it is **not** a link a non-admin recipient can open.
+The returned **NC redeem URL** (`/apps/nc_wireguard/api/peers/otl/{token}`) is a
+**public** shareable link (no Nextcloud login). Minting stays admin+CSRF; redeem
+is rate-limited per client IP. Prefer this URL for field handoff; keep
+**Download .conf** / QR as a backup if the token expires.
 
-To hand a config to a field user, use the **Download .conf** button or the QR in
-the same modal and send that. Only the engine's own `/cnf/{token}` route is
-unauthenticated, and after cutover it is reachable on the Docker network only.
+Engine `/cnf/{token}` remains the upstream one-shot path (Docker network only
+after the UI cutover).
+
+### Bulk Field preset
+
+On Overview, multi-select peers and **Apply Field preset** to set AllowedIPs
+`10.0.0.0/24,10.8.0.0/24` and keepalive `25` (IPv4-only). The peer named
+`Server` is skipped by default so full-tunnel break-glass stays intact.
+
+### Server defaults (read-only)
+
+The System tab shows a read-only card from wg-easy `GET /api/admin/general` +
+`/api/admin/interface` (port, CIDR, MTU, host). DNS / AllowedIPs / keepalive are
+per-peer on wg-easy v15 — not global. **No server write / restart / hooks /
+Amnezia** from Nextcloud in v2.2; use break-glass loopback `127.0.0.1:51821` for
+those. Portainer has no WireGuard surface on this host.
 
 ### Hiding the wg-easy deep links
 
@@ -56,6 +69,13 @@ one-time link → configuration → redeem, and always deletes the peer again:
 ```bash
 docker exec -u www-data cloud_app php \
   /var/www/html/custom_apps/nc_wireguard/scripts/smoke-peer-writes.php
+```
+
+Public OTL redeem (no cookie) after minting via smoke or the UI:
+
+```bash
+# After mint: curl -sf "https://<nc-host>/apps/nc_wireguard/api/peers/otl/<token>" -o peer.conf
+# Second fetch of the same token must fail (single-use).
 ```
 
 Every line must read `OK` and the last line `smoke-peer-writes OK`. A

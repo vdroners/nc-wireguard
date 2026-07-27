@@ -118,7 +118,84 @@ class PeerFieldValidator
 			}
 		}
 
+		if (array_key_exists('ipv4Address', $input)) {
+			$raw = $input['ipv4Address'];
+			if ($raw === null || $raw === '') {
+				// Empty means leave existing / let engine assign — omit from fields on create.
+				// On update, empty is rejected so we never wipe the assignment accidentally.
+				if (!$requireName) {
+					$errors['ipv4Address'] = 'IPv4 address cannot be cleared; omit the field to leave it unchanged.';
+				}
+			} else {
+				$ip = trim((string) $raw);
+				if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+					$errors['ipv4Address'] = 'Must be a valid IPv4 address (e.g. 10.8.0.10).';
+				} else {
+					$fields['ipv4Address'] = $ip;
+				}
+			}
+		}
+
+		if (array_key_exists('serverEndpoint', $input)) {
+			$raw = $input['serverEndpoint'];
+			if ($raw === null || $raw === '') {
+				$fields['serverEndpoint'] = null;
+			} else {
+				$endpoint = $this->normalizeServerEndpoint($raw);
+				if ($endpoint === null) {
+					$errors['serverEndpoint'] = 'Endpoint must be host:port (IPv4/hostname) or [IPv6]:port.';
+				} else {
+					$fields['serverEndpoint'] = $endpoint;
+				}
+			}
+		}
+
 		return ['fields' => $fields, 'errors' => $errors];
+	}
+
+	/**
+	 * Accept host:port, IPv4:port, or [IPv6]:port.
+	 */
+	private function normalizeServerEndpoint(mixed $raw): ?string
+	{
+		if (!is_string($raw)) {
+			return null;
+		}
+		$value = trim($raw);
+		if ($value === '' || mb_strlen($value) > 253) {
+			return null;
+		}
+		if (preg_match('/[\x00-\x1F\x7F]/', $value) === 1) {
+			return null;
+		}
+		// [ipv6]:port
+		if (preg_match('/^\[([^\]]+)\]:(\d{1,5})$/', $value, $m) === 1) {
+			$port = (int) $m[2];
+			if ($port < 1 || $port > 65535) {
+				return null;
+			}
+			if (filter_var($m[1], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
+				return null;
+			}
+			return '[' . $m[1] . ']:' . $port;
+		}
+		// host:port or ipv4:port (last colon separates port)
+		if (preg_match('/^(.+):(\d{1,5})$/', $value, $m) !== 1) {
+			return null;
+		}
+		$host = $m[1];
+		$port = (int) $m[2];
+		if ($port < 1 || $port > 65535) {
+			return null;
+		}
+		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+			return $host . ':' . $port;
+		}
+		// Hostname labels (no spaces); allow dots and hyphens.
+		if (preg_match('/^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/', $host) !== 1) {
+			return null;
+		}
+		return $host . ':' . $port;
 	}
 
 	private function normalizeName(mixed $raw): ?string

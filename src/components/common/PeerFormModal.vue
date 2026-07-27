@@ -35,6 +35,17 @@
 					<span>PersistentKeepalive</span>
 					<input v-model.number="form.persistentKeepalive" type="number" min="0" max="65535" class="nc-wg-input">
 				</label>
+				<details class="nc-wg-advanced">
+					<summary>Advanced</summary>
+					<label class="nc-wg-field">
+						<span>IPv4 address (optional override)</span>
+						<input v-model="form.ipv4Address" type="text" class="nc-wg-input" placeholder="Leave blank to keep / auto-assign">
+					</label>
+					<label class="nc-wg-field">
+						<span>Server endpoint override (host:port)</span>
+						<input v-model="form.serverEndpoint" type="text" class="nc-wg-input" placeholder="vpn.example.com:51820">
+					</label>
+				</details>
 				<ErrorBanner v-if="error" :message="error" title="Save failed" :dismissible="false" />
 				<div class="nc-wg-modal__actions">
 					<button type="submit" class="nc-wg-btn nc-wg-btn--primary" :disabled="saving">
@@ -79,6 +90,8 @@ export default {
 				dns: '',
 				mtu: 1420,
 				persistentKeepalive: 25,
+				ipv4Address: '',
+				serverEndpoint: '',
 			},
 			saving: false,
 			error: '',
@@ -115,6 +128,8 @@ export default {
 					dns: listToCsv(this.peer.dns),
 					mtu: this.peer.mtu ?? 1420,
 					persistentKeepalive: this.peer.persistentKeepalive ?? 25,
+					ipv4Address: this.peer.ipv4Address || '',
+					serverEndpoint: this.peer.serverEndpoint || '',
 				}
 			} else {
 				this.form = {
@@ -124,6 +139,8 @@ export default {
 					dns: '',
 					mtu: 1420,
 					persistentKeepalive: 25,
+					ipv4Address: '',
+					serverEndpoint: '',
 				}
 			}
 		},
@@ -136,6 +153,17 @@ export default {
 				persistentKeepalive: Number(this.form.persistentKeepalive) || 0,
 				// wg-easy create requires the key; null = no expiry
 				expiresAt: this.form.expiresAt.trim() === '' ? null : this.form.expiresAt.trim(),
+			}
+			const ipv4 = this.form.ipv4Address.trim()
+			if (ipv4 !== '') {
+				body.ipv4Address = ipv4
+			}
+			const endpoint = this.form.serverEndpoint.trim()
+			if (endpoint !== '') {
+				body.serverEndpoint = endpoint
+			} else if (this.isEdit && this.peer?.serverEndpoint) {
+				// Explicit clear when the operator empties a previously set override.
+				body.serverEndpoint = null
 			}
 			return body
 		},
@@ -168,4 +196,6 @@ export default {
 .nc-wg-input { padding: 0.4rem 0.5rem; }
 .nc-wg-presets { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
 .nc-wg-presets__label { font-size: 0.85rem; opacity: 0.8; }
+.nc-wg-advanced { margin: 0.5rem 0 0.75rem; }
+.nc-wg-advanced summary { cursor: pointer; margin-bottom: 0.5rem; }
 </style>
