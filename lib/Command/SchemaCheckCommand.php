@@ -24,7 +24,7 @@ class SchemaCheckCommand extends Command
 	protected function configure(): void
 	{
 		$this->setName('nc_wireguard:schema-check')
-			->setDescription('Verify nc_wireguard native metrics DB schema (six tables)');
+			->setDescription('Verify nc_wireguard DB schema (metrics + peer store tables)');
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int

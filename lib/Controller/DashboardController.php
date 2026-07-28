@@ -9,7 +9,7 @@ use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\NativeDashboardService;
 use OCA\NcWireguard\Service\NativeHealthService;
 use OCA\NcWireguard\Service\PathSanitizer;
-use OCA\NcWireguard\Service\WgEasyClient;
+use OCA\NcWireguard\Service\WireGuardEngineInterface;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
@@ -35,7 +35,7 @@ class DashboardController extends Controller
 		private AppSettings $appSettings,
 		private NativeDashboardService $nativeDashboard,
 		private NativeHealthService $nativeHealth,
-		private WgEasyClient $wgEasyClient,
+		private WireGuardEngineInterface $engine,
 		private IConfig $config,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
@@ -136,7 +136,7 @@ class DashboardController extends Controller
 
 			case 'server':
 				// Read-only engine defaults — never write from NC in v2.2.
-				return new JSONResponse($this->wgEasyClient->getServerDefaults());
+				return new JSONResponse($this->engine->getServerInfo());
 
 			default:
 				return new JSONResponse(

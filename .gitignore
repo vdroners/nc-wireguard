@@ -5,9 +5,11 @@
 !/css/nc-wireguard-theme.scss
 /vendor/
 /.env
+# wg-sync bearer token — never committed.
+/services/wg-sync/.env.lab
+/services/wg-sync/__pycache__/
 /.phpunit.cache
 /.phpunit.result.cache
-/src/_nc_gcs_src_mirror/
 *.log
 .DS_Store
 /.backups/

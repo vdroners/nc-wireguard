@@ -31,12 +31,13 @@ Public legacy URL `https://vpn-vdroners.ddns.net/dashboard/` was retired at cuto
 
 ## Frontend (`src/`)
 
-Only files **outside** `src/_nc_gcs_src_mirror/` are owned by this app. The mirror is a build-time copy of NC-GCS shell assets (gitignored; refreshed via `make sync-theme`).
+All of `src/` is owned by this app (no NC-GCS theme mirror).
 
 | Path | Role |
 |------|------|
 | `main.js` | Mount `AppRoot` (shell + dashboard) |
-| `components/AppRoot.vue` | `NcGcsAppShell` wrapper; banner status chips |
+| `components/AppRoot.vue` | Local `NcAppShell` wrapper; banner status chips |
+| `components/NcAppShell.vue` | Standalone banner/body shell (`nc-wg-app-shell`) |
 | `components/WireGuardDashboard.vue` | Tab routing, polling lifecycle, modals |
 | `components/TabBar.vue` | Desktop 5-tab bar; mobile Overview + More menu |
 | `composables/useDashboardSummary.js` | **Single source of truth** for summary/health poll (15s, visibility-aware) |
@@ -66,14 +67,16 @@ Only files **outside** `src/_nc_gcs_src_mirror/` are owned by this app. The mirr
 | Class | Role |
 |-------|------|
 | `DashboardController` | Native dashboard routes: summary, bandwidth, connections, geoip, system, health, server |
-| `WgEasyReadProxyController` | Peer WireGuard config via `WgEasyClient` (`/api/peers/{id}/configuration`) |
+| `WgEasyReadProxyController` | Peer WireGuard config via engine (`/api/peers/{id}/configuration`) |
 | `PeerWriteController` | Peer CRUD + OTL mint (admin); public OTL redeem (v2.2) |
 | `PeerFieldValidator` | Peer form input rules: name, AllowedIPs CIDR, DNS, MTU, keepalive, ipv4, serverEndpoint |
 | `OtlRedeemRateLimiter` | Per-IP appconfig window for public OTL redeem |
 | `OtlRedeemTracker` | NC-side single-use token memory (complements wg-easy erase) |
 | `NativeDashboardService` | Builds dashboard JSON from MySQL mappers |
-| `NativeHealthService` | Aggregates poller heartbeat, wg-easy, host proc |
-| `MetricsPollService` | Poll loop: wg-easy clients → DB writes |
+| `NativeHealthService` | Aggregates poller heartbeat, engine, host proc |
+| `MetricsPollService` | Poll loop: engine peers → DB writes |
+| `WireGuardEngineInterface` | Engine abstraction (`listPeers`, CRUD, stats by `public_key`, …) |
+| `WgEasyEngine` | Default engine: wraps `WgEasyClient` |
 | `WgEasyClient` | Session auth + REST calls to wg-easy (incl. `getServerDefaults`) |
 | `HostProcCollector` | CPU/mem/disk/net from `/host/proc` or `/proc` |
 | `DockerUrlResolver` | Rewrites `host.docker.internal` when DNS fails in container |

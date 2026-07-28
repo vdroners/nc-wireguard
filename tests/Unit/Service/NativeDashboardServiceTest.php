@@ -17,7 +17,7 @@ use OCA\NcWireguard\Service\ConnectionStateMachine;
 use OCA\NcWireguard\Service\HostProcCollector;
 use OCA\NcWireguard\Service\NativeDashboardService;
 use OCA\NcWireguard\Service\SystemMetricsCollector;
-use OCA\NcWireguard\Service\WgEasyClient;
+use OCA\NcWireguard\Service\WireGuardEngineInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -49,8 +49,8 @@ final class NativeDashboardServiceTest extends TestCase
 			];
 		}, $fixture['clients']);
 
-		$wgEasy = $this->createMock(WgEasyClient::class);
-		$wgEasy->method('getClients')->willReturn($wgClients);
+		$engine = $this->createMock(WireGuardEngineInterface::class);
+		$engine->method('listPeers')->willReturn($wgClients);
 
 		$hostProc = $this->createMock(HostProcCollector::class);
 		$hostProc->method('readBootTimeIso')->willReturn($fixture['serverBootTime']);
@@ -63,7 +63,7 @@ final class NativeDashboardServiceTest extends TestCase
 		]);
 
 		$service = new NativeDashboardService(
-			$wgEasy,
+			$engine,
 			new ConnectionStateMachine(),
 			$this->createMock(BandwidthLogMapper::class),
 			$this->createMock(ConnectionLogMapper::class),
@@ -160,9 +160,9 @@ final class NativeDashboardServiceTest extends TestCase
 
 	public function testBuildSummaryReturnsWgEasyError(): void
 	{
-		$wgEasy = $this->createMock(WgEasyClient::class);
-		$wgEasy->method('getClients')->willReturn(null);
-		$service = $this->makeService(wgEasy: $wgEasy);
+		$engine = $this->createMock(WireGuardEngineInterface::class);
+		$engine->method('listPeers')->willReturn(null);
+		$service = $this->makeService(engine: $engine);
 		$response = $service->buildSummary();
 		self::assertSame(['error' => 'Cannot reach wg-easy'], $response);
 	}
@@ -172,7 +172,7 @@ final class NativeDashboardServiceTest extends TestCase
 		?ConnectionLogMapper $connectionMapper = null,
 		?GeoIpCacheMapper $geoIpMapper = null,
 		?SystemMetricsMapper $systemMetricsMapper = null,
-		?WgEasyClient $wgEasy = null,
+		?WireGuardEngineInterface $engine = null,
 	): NativeDashboardService {
 		$hostProc = $this->createMock(HostProcCollector::class);
 		$hostProc->method('readBootTimeIso')->willReturn('2026-06-20T23:10:13+00:00');
@@ -185,7 +185,7 @@ final class NativeDashboardServiceTest extends TestCase
 		]);
 
 		return new NativeDashboardService(
-			$wgEasy ?? $this->createMock(WgEasyClient::class),
+			$engine ?? $this->createMock(WireGuardEngineInterface::class),
 			new ConnectionStateMachine(),
 			$bandwidthMapper ?? $this->createMock(BandwidthLogMapper::class),
 			$connectionMapper ?? $this->createMock(ConnectionLogMapper::class),

@@ -69,7 +69,7 @@ export default {
 		backendChip() {
 			const h = this.store.health
 			if (!h || !h.is_admin) return ''
-			return 'Native backend'
+			return 'NC WireGuard v2.3'
 		},
 		healthChip() {
 			const h = this.store.health

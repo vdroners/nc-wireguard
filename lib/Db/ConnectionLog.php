@@ -17,6 +17,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setEvent(string $event)
  * @method string|null getEndpoint()
  * @method void setEndpoint(?string $endpoint)
+ * @method string|null getPeerUuid()
+ * @method void setPeerUuid(?string $peerUuid)
  */
 class ConnectionLog extends Entity
 {
@@ -25,6 +27,8 @@ class ConnectionLog extends Entity
 	protected $name;
 	protected $event;
 	protected $endpoint;
+	/** Backfilled at cutover so history survives losing the wg-easy integer id. */
+	protected $peerUuid;
 
 	public function __construct()
 	{

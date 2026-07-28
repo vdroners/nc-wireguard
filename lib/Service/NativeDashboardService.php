@@ -18,7 +18,7 @@ use OCA\NcWireguard\Util\EndpointIp;
 class NativeDashboardService
 {
 	public function __construct(
-		private WgEasyClient $wgEasyClient,
+		private WireGuardEngineInterface $engine,
 		private ConnectionStateMachine $fsm,
 		private BandwidthLogMapper $bandwidthMapper,
 		private ConnectionLogMapper $connectionMapper,
@@ -34,7 +34,7 @@ class NativeDashboardService
 	 */
 	public function buildSummary(): array
 	{
-		$clients = $this->wgEasyClient->getClients();
+		$clients = $this->engine->listPeers();
 		if ($clients === null) {
 			return ['error' => 'Cannot reach wg-easy'];
 		}

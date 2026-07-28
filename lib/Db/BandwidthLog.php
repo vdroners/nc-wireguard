@@ -17,6 +17,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setTransferRx(int $transferRx)
  * @method int getTransferTx()
  * @method void setTransferTx(int $transferTx)
+ * @method string|null getPeerUuid()
+ * @method void setPeerUuid(?string $peerUuid)
  */
 class BandwidthLog extends Entity
 {
@@ -25,6 +27,8 @@ class BandwidthLog extends Entity
 	protected $name;
 	protected $transferRx;
 	protected $transferTx;
+	/** Backfilled at cutover so history survives losing the wg-easy integer id. */
+	protected $peerUuid;
 
 	public function __construct()
 	{

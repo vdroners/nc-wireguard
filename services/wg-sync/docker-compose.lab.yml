@@ -1,0 +1,82 @@
+# wg-sync LAB stack.
+#
+# Runs alongside production wg-easy and never touches it:
+#   interface  wg-lab0   (production is wg0)
+#   UDP port   51830     (production is 51820)
+#   API        127.0.0.1:51831 (loopback only; cloud_app reaches it over the
+#                               shared Docker network, not the host port)
+#
+# The tunnel subnet comes from nc_wg_server.cidr and will match production's
+# 10.8.0.0/24. That is harmless: the interface and its routes live in this
+# container's network namespace, not the host's.
+#
+# Nothing here binds 51820 or names wg0, and app.py refuses both unless
+# WG_SYNC_ALLOW_PROD=1 is set explicitly at cutover.
+#
+#   docker compose -f services/wg-sync/docker-compose.lab.yml up -d --build
+#
+services:
+  wg-sync-lab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nc-wireguard/wg-sync:lab
+    container_name: wg_sync_lab
+    env_file:
+      - .env.lab
+    environment:
+      WG_INTERFACE: wg-lab0
+      # Pinned so the tunnel listens on the port this file publishes. Without
+      # it the interface would take the 51820 that the NC server row still
+      # carries from production, and app.py would refuse to bind it.
+      WG_LISTEN_PORT: "51830"
+      WG_SYNC_PORT: "51821"
+      WG_SYNC_BIND: 0.0.0.0
+      WG_SYNC_ENABLE_NAT: "1"
+      WG_NAT_OUT_INTERFACE: eth0
+      # Source range for MASQUERADE. Must match nc_wg_server.cidr.
+      WG_TUNNEL_CIDR: 10.8.0.0/24
+      # Never set to 1 in the lab. It is the only thing standing between a
+      # typo and the production tunnel.
+      WG_SYNC_ALLOW_PROD: "0"
+      # Docker HEALTHCHECK hits /health without a bearer token.
+      WG_SYNC_HEALTH_PUBLIC: "1"
+    volumes:
+      - wg_sync_lab_config:/etc/wireguard
+      - /lib/modules:/lib/modules:ro
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      # Same three knobs wg-easy sets; without them peers handshake and then
+      # reach nothing.
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    ports:
+      # Lab tunnel — deliberately NOT 51820.
+      - "51830:51830/udp"
+      # API on loopback only. Nextcloud talks to it on the Docker network as
+      # http://wg_sync_lab:51821; the host port is for curl during a smoke.
+      - "127.0.0.1:51831:51821/tcp"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - wg-sync-lab
+      # Nextcloud app network on this host (cloud_app). Rename if `docker network ls` differs.
+      - cloud_cloud_network
+
+volumes:
+  wg_sync_lab_config:
+
+networks:
+  wg-sync-lab:
+    driver: bridge
+  cloud_cloud_network:
+    external: true

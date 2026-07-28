@@ -1,8 +1,7 @@
 module.exports = {
 	root: true,
 	extends: ['@nextcloud'],
-	ignorePatterns: ['src/_nc_gcs_src_mirror/**'],
-	rules: {
+		rules: {
 		'vue/html-indent': 'off',
 		'vue/singleline-html-element-content-newline': 'off',
 		'vue/max-attributes-per-line': 'off',

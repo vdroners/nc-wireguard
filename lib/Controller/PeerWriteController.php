@@ -6,10 +6,11 @@ namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
 use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\NcOtlService;
 use OCA\NcWireguard\Service\OtlRedeemRateLimiter;
 use OCA\NcWireguard\Service\OtlRedeemTracker;
 use OCA\NcWireguard\Service\PeerFieldValidator;
-use OCA\NcWireguard\Service\WgEasyClient;
+use OCA\NcWireguard\Service\WireGuardEngineInterface;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
@@ -34,8 +35,9 @@ class PeerWriteController extends Controller
 	public function __construct(
 		IRequest $request,
 		private AppSettings $appSettings,
-		private WgEasyClient $wgEasyClient,
+		private WireGuardEngineInterface $engine,
 		private PeerFieldValidator $peerFieldValidator,
+		private NcOtlService $ncOtl,
 		private OtlRedeemRateLimiter $otlRedeemRateLimiter,
 		private OtlRedeemTracker $otlRedeemTracker,
 		private IGroupManager $groupManager,
@@ -79,6 +81,30 @@ class PeerWriteController extends Controller
 	}
 
 	/**
+	 * `gate()` plus the P6 cutover write freeze.
+	 *
+	 * Used by everything that changes the fleet or hands out a new link.
+	 * Downloads and redeems keep using the plain gate: they do not put the
+	 * peer store and the engine out of step.
+	 */
+	private function writeGate(): ?JSONResponse
+	{
+		if ($resp = $this->gate()) {
+			return $resp;
+		}
+		if ($this->appSettings->arePeerWritesFrozen()) {
+			return new JSONResponse(
+				[
+					'message' => 'Peer writes are frozen for an engine cutover',
+					'reason' => 'writes_frozen',
+				],
+				Http::STATUS_SERVICE_UNAVAILABLE
+			);
+		}
+		return null;
+	}
+
+	/**
 	 * @param array<string, mixed> $extra
 	 */
 	private function audit(string $action, ?int $clientId, int $httpCode, array $extra = []): void
@@ -94,7 +120,7 @@ class PeerWriteController extends Controller
 	#[AdminRequired]
 	public function create(): JSONResponse
 	{
-		if ($resp = $this->gate()) {
+		if ($resp = $this->writeGate()) {
 			return $resp;
 		}
 		$data = $this->jsonBody();
@@ -109,7 +135,7 @@ class PeerWriteController extends Controller
 		if (!array_key_exists('expiresAt', $fields)) {
 			$fields['expiresAt'] = null;
 		}
-		$result = $this->wgEasyClient->createClient([
+		$result = $this->engine->create([
 			'name' => $fields['name'],
 			'expiresAt' => $fields['expiresAt'],
 		]);
@@ -123,14 +149,14 @@ class PeerWriteController extends Controller
 		$updateFields = $fields;
 		unset($updateFields['name'], $updateFields['expiresAt']);
 		if ($updateFields !== []) {
-			$upd = $this->wgEasyClient->updateClient($clientId, $updateFields);
+			$upd = $this->engine->update($clientId, $updateFields);
 			$this->audit('create_update', $clientId, $upd['http_code']);
 			if (!$upd['ok']) {
 				return $this->errorFromResult($upd);
 			}
 		}
 
-		$client = $this->wgEasyClient->getClient($clientId);
+		$client = $this->engine->getPeer($clientId);
 		return new JSONResponse([
 			'success' => true,
 			'clientId' => $clientId,
@@ -141,7 +167,7 @@ class PeerWriteController extends Controller
 	#[AdminRequired]
 	public function update(int $clientId): JSONResponse
 	{
-		if ($resp = $this->gate()) {
+		if ($resp = $this->writeGate()) {
 			return $resp;
 		}
 		if ($clientId < 1) {
@@ -162,27 +188,27 @@ class PeerWriteController extends Controller
 		if ($fields === []) {
 			return new JSONResponse(['error' => 'No fields to update'], Http::STATUS_BAD_REQUEST);
 		}
-		$result = $this->wgEasyClient->updateClient($clientId, $fields);
+		$result = $this->engine->update($clientId, $fields);
 		$this->audit('update', $clientId, $result['http_code']);
 		if (!$result['ok']) {
 			return $this->errorFromResult($result);
 		}
 		return new JSONResponse([
 			'success' => true,
-			'client' => $this->wgEasyClient->getClient($clientId),
+			'client' => $this->engine->getPeer($clientId),
 		]);
 	}
 
 	#[AdminRequired]
 	public function destroy(int $clientId): JSONResponse
 	{
-		if ($resp = $this->gate()) {
+		if ($resp = $this->writeGate()) {
 			return $resp;
 		}
 		if ($clientId < 1) {
 			return new JSONResponse(['error' => 'Invalid client id'], Http::STATUS_BAD_REQUEST);
 		}
-		$result = $this->wgEasyClient->deleteClient($clientId);
+		$result = $this->engine->delete($clientId);
 		$this->audit('delete', $clientId, $result['http_code']);
 		if (!$result['ok']) {
 			return $this->errorFromResult($result);
@@ -204,15 +230,15 @@ class PeerWriteController extends Controller
 
 	private function toggle(int $clientId, bool $enable): JSONResponse
 	{
-		if ($resp = $this->gate()) {
+		if ($resp = $this->writeGate()) {
 			return $resp;
 		}
 		if ($clientId < 1) {
 			return new JSONResponse(['error' => 'Invalid client id'], Http::STATUS_BAD_REQUEST);
 		}
 		$result = $enable
-			? $this->wgEasyClient->enableClient($clientId)
-			: $this->wgEasyClient->disableClient($clientId);
+			? $this->engine->enable($clientId)
+			: $this->engine->disable($clientId);
 		$this->audit($enable ? 'enable' : 'disable', $clientId, $result['http_code']);
 		if (!$result['ok']) {
 			return $this->errorFromResult($result);
@@ -223,14 +249,17 @@ class PeerWriteController extends Controller
 	#[AdminRequired]
 	public function oneTimeLink(int $clientId): JSONResponse
 	{
-		if ($resp = $this->gate()) {
+		if ($resp = $this->writeGate()) {
 			return $resp;
 		}
 		if ($clientId < 1) {
 			return new JSONResponse(['error' => 'Invalid client id'], Http::STATUS_BAD_REQUEST);
 		}
-		$result = $this->wgEasyClient->generateOneTimeLink($clientId);
-		$this->audit('otl_generate', $clientId, $result['http_code']);
+		$ncSource = $this->appSettings->getOtlSource() === AppSettings::OTL_SOURCE_NC;
+		$result = $ncSource
+			? $this->ncOtl->mintForEngineId($clientId)
+			: $this->engine->generateOneTimeLink($clientId);
+		$this->audit('otl_generate', $clientId, $result['http_code'], ['source' => $ncSource ? 'nc' : 'engine']);
 		if (!$result['ok']) {
 			return $this->errorFromResult($result);
 		}
@@ -290,10 +319,25 @@ class PeerWriteController extends Controller
 			);
 		}
 
-		$result = $this->wgEasyClient->redeemOneTimeLink($token);
+		$source = 'engine';
+		$result = null;
+		if ($this->appSettings->getOtlSource() === AppSettings::OTL_SOURCE_NC) {
+			$source = 'nc';
+			$result = $this->ncOtl->redeem($token);
+			if (!$result['ok'] && ($result['code'] ?? '') === NcOtlService::ERR_UNKNOWN) {
+				// A link minted before the switch is still an engine token, so
+				// an unknown NC token falls through instead of 404-ing a field
+				// user who is holding a perfectly good wg-easy link.
+				$source = 'engine_fallback';
+				$result = null;
+			}
+		}
+		$result ??= $this->engine->redeemOneTimeLink($token);
+
 		$this->audit('otl_redeem', null, $result['http_code'], [
 			'token_len' => strlen($token),
 			'public' => true,
+			'source' => $source,
 		]);
 		if (!$result['ok'] || $result['body'] === false) {
 			return new JSONResponse(
@@ -304,7 +348,7 @@ class PeerWriteController extends Controller
 		$this->otlRedeemTracker->markRedeemed($token);
 		return new DataDownloadResponse(
 			(string) $result['body'],
-			'peer.conf',
+			is_string($result['filename'] ?? null) ? $result['filename'] : 'peer.conf',
 			'text/plain'
 		);
 	}
@@ -318,14 +362,14 @@ class PeerWriteController extends Controller
 		if ($clientId < 1) {
 			return new JSONResponse(['error' => 'Invalid client id'], Http::STATUS_BAD_REQUEST);
 		}
-		$result = $this->wgEasyClient->getClientConfiguration($clientId);
+		$result = $this->engine->getConfiguration($clientId);
 		if (!$result['ok'] || $result['body'] === false) {
 			return new JSONResponse(
 				['error' => 'configuration fetch failed'],
 				$result['http_code'] >= 400 ? $result['http_code'] : Http::STATUS_BAD_GATEWAY
 			);
 		}
-		$data = $this->wgEasyClient->formatConfigurationBody(
+		$data = $this->engine->formatConfigurationBody(
 			(string) $result['body'],
 			$result['is_json']
 		);

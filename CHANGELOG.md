@@ -1,5 +1,120 @@
 # Changelog
 
+## [Unreleased]
+
+## [2.3.0] - 2026-07-27
+
+### Added — standalone finish (S1–S4)
+
+- Break Vue `package-lock` link to NC-GCS; retire `dedupe-vue`; deploy PATH uses
+  local `node_modules/.bin` only; `npm ci && npm run build` without NC-GCS
+- Remove `ThemeAssetLoader` / `sync-theme-from-nc-gcs.sh` / `_nc_gcs_src_mirror`;
+  rename shell CSS markers to `nc-wg-app-shell`
+- `GATE_PEER_WRITES=1` peer-write (+ optional `GATE_OTL_TOKEN`) in `gate-local.sh`;
+  release asset named from `info.xml` version; App Store contract: external engine
+  required; screenshot placeholders refreshed
+- Admin copy: “Test engine”, engine-agnostic watchdog wording; primary admin
+  strings via `t()` + `l10n/en.json` / `de.json`
+
+### Added — engine interface (P2)
+
+- `WireGuardEngineInterface` + `WgEasyEngine` (default); runtime stats keyed by
+  `public_key`; controllers/poller/summary go through the interface
+
+### Added — peer export (P1)
+
+- `scripts/export-peers.sh` (get-one + `.conf`, `0700`/`0600` under
+  `/media/4TB/wireguard/exports/`); `docs/ops/PEER_EXPORT.md`
+
+### Added — NC peer store (P3)
+
+- Migration `Version000002Date20260727000000`: `nc_wg_peers` (`uuid` +
+  `public_key` unique, nullable `wg_easy_id`, tunnel fields, `has_amnezia`),
+  `nc_wg_peer_secrets` (encrypted private key + PSK), and the `nc_wg_server`
+  singleton (host/port/CIDR/MTU, defaults, preserved `server_public_key`,
+  `ipv4_only`). Nullable `peer_uuid` / `public_key` columns added to the metrics
+  tables as remap headroom for cutover
+- `PeerSecretCrypto` (`enc:peer:v1:`) — **throws** on any decrypt failure, unlike
+  `SecretCrypto`, which returns the stored blob and would let ciphertext reach a
+  peer config
+- `PeerIpam` — `10.8.0.0/24` pool, server `.1` reserved, first free `/32`,
+  collision-checked against stored peers; IPv4 only
+- `PeerStoreService` — shadow store while `engine=wgeasy`; matches on public key
+  then `wg_easy_id`; never generates a keypair and never overwrites stored key
+  material without an explicit flag
+- `occ nc_wireguard:import-peers [--from-export=DIR] [--dry-run]` — imports from
+  the live engine (`getPeer` for secrets the list endpoint strips) or from an
+  `export-peers.sh` directory; flags `keepalive=0` against the Field preset's
+  25 s, flags Amnezia peers, preserves the `Server` break-glass peer
+- `engine` (default `wgeasy`) and `otl_source` (default `wgeasy`) settings
+- Checked-in plan `.cursor/plans/leave-wg-easy-engine.md`
+
+### Added — native conf / QR / OTL (P4)
+
+- `PeerConfBuilder` renders a peer `.conf` from the NC store: `[Interface]`
+  private key / Address / DNS / MTU, `[Peer]` server public key, endpoint
+  (`serverEndpoint` override else `host:port`), AllowedIPs and keepalive.
+  Precedence is peer → `nc_wg_server` → preset. It refuses (rather than emits a
+  config that cannot connect) when the private key, address, server public key,
+  or endpoint is missing, and never writes `::/0` while `ipv4_only`
+- `PeerPresets` — Field (`10.0.0.0/24, 10.8.0.0/24`, keepalive 25) and Admin
+  (`0.0.0.0/0`, keepalive 0) as server-side constants, so the builder and the
+  admin UI cannot drift. Documented in `docs/ops/NATIVE_CONF_DEFAULTS.md`
+- `NcOtlService` — Nextcloud mints its own one-time links when `otl_source=nc`
+  (appconfig-backed, single-use, expiry reported as 410 not 404).
+  `redeemOtl` falls through to the engine for tokens it does not recognise, so
+  links minted before the switch keep working. Default stays `wgeasy`
+
+### Added — wg-sync sidecar + NativeEngine (P5, lab only)
+
+- `services/wg-sync/` — stdlib-only Python HTTP service: `GET /health`,
+  `POST /apply`, `GET /dump`, `POST /reload`, bearer-token auth, atomic config
+  write plus `wg syncconf` so existing peers keep their handshakes.
+  `entrypoint.sh` reproduces wg-easy's NAT/sysctl parity (`ip_forward`, IPv6
+  forwarding, `src_valid_mark`, MASQUERADE, FORWARD ACCEPT)
+- `docker-compose.lab.yml` — interface `wg-lab0`, UDP **51830**, API on
+  loopback `51831`. `app.py` refuses `wg0` or `51820` unless
+  `WG_SYNC_ALLOW_PROD=1`, so the lab runs beside production wg-easy
+- `NativeEngine` — full `WireGuardEngineInterface` over the peer store plus the
+  sidecar. Amnezia `j*`/`i*` and any IPv6 address are **refused**, never
+  dropped; a stored Amnezia peer is excluded from the applied set and logged
+- `ServerKeyStore` + `occ nc_wireguard:set-server-key` (reads stdin) — seals the
+  interface private key with hard-fail crypto and mirrors the public half onto
+  `nc_wg_server`
+- `EngineResolver` — `engine=native` activates only with `import_complete` and a
+  non-empty peer store; `Application.php` resolves the engine through it per
+  request, so a rollback is one `occ config:app:set`
+- `scripts/smoke-native-engine.php` — lab smoke that exits 0 (SKIP) when the
+  sidecar is unreachable
+
+### Added — cutover scaffolding (P6)
+
+- `docs/ops/ENGINE_CUTOVER.md` — operator runbook: freeze → export/archive →
+  re-import + remap → same-51820 swap with the preserved interface key → verify
+  with a real field peer → unfreeze, plus the rollback (restore archive, pin
+  `wg-easy:15`, `engine=wgeasy`)
+- `peer_writes_frozen` — blocks peer CRUD and OTL mint with
+  `503 writes_frozen`; downloads, redeems, and the poller keep working
+- `occ nc_wireguard:remap-metrics [--apply]` (and
+  `scripts/remap-metrics-peer-ids.php`) — backfills `peer_uuid` / `public_key`
+  on the metrics tables from `wg_easy_id`. Dry run by default, idempotent, and
+  leaves `client_id` as the audit trail
+- `AppSettings::SETTING_ALIASES` — reads the new `engine_*` names and falls back
+  to `wg_easy_*` for one minor, so existing `occ config:app:set` usage and
+  scripted deploys survive the rename
+
+### Fixed
+
+- `admin.js` called `t()` without defining it and without `@nextcloud/l10n` as a
+  dependency; it now delegates to Nextcloud's global `t()` when present and
+  falls back to the source string
+
+### Notes
+
+- The migration only applies on `occ upgrade`, i.e. after an app version bump
+- **Production stays on wg-easy.** Nothing in this change writes to the engine
+  or switches engines; the cutover is an operator action against the runbook
+
 ## [2.2.0] - 2026-07-27
 
 ### Added

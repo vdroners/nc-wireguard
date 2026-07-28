@@ -634,7 +634,7 @@
 
 .nc-wg-admin-link:hover { text-decoration: underline; }
 
-.nc-gcs-app-shell--nc_wireguard:not(.nc-gcs-themed) {
+.nc-wg-app-shell--nc_wireguard:not(.nc-wg-themed) {
 	background: var(--color-main-background, #1a1a1a);
 	color: var(--color-main-text, #e5e5e5);
 	min-height: 100vh;

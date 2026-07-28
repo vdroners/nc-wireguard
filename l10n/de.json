@@ -10,6 +10,18 @@
 		"Connections": "Verbindungen",
 		"Map": "Karte",
 		"System": "System",
-		"NC WireGuard settings": "NC-WireGuard-Einstellungen"
+		"NC WireGuard settings": "NC-WireGuard-Einstellungen",
+		"Test engine": "Engine testen",
+		"Test native health": "Native Health prüfen",
+		"Engine": "Engine",
+		"Native health": "Native Health",
+		"Save": "Speichern",
+		"Open dashboard": "Dashboard öffnen",
+		"Loading…": "Laden…",
+		"Dashboard enabled": "Dashboard aktiviert",
+		"Engine username": "Engine-Benutzername",
+		"Engine password": "Engine-Passwort",
+		"Background job logs stale polls and engine failures (see Nextcloud log).": "Hintergrundjob protokolliert veraltete Polls und Engine-Fehler (siehe Nextcloud-Log).",
+		"Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.": "Nicht verbunden mit oder empfohlen von WireGuard oder wg-easy. WireGuard ist eine eingetragene Marke von Jason A. Donenfeld."
 	}
 }

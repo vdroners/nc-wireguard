@@ -24,6 +24,14 @@ const AdminPanel = {
 		await this.load()
 	},
 	methods: {
+		// The template calls t(), but @nextcloud/l10n is not a dependency of this
+		// app. Nextcloud's server-rendered page defines a global t(); use it when
+		// present so real translations still apply, and fall back to the source
+		// string otherwise. Without this the template resolves t against the
+		// component instance and throws in the Vue dev build.
+		t(app, s) {
+			return typeof window.t === 'function' ? window.t(app, s) : s
+		},
 		api(path, opts = {}) {
 			return axios({ url: generateUrl(`/apps/nc_wireguard/api/settings${path}`), ...opts })
 		},
@@ -102,57 +110,57 @@ const AdminPanel = {
 	template: `
 		<div class="nc-wireguard-admin-panel" v-if="!loading">
 			<h2>NC WireGuard</h2>
-			<p class="muted">Native backend v2.1 — peer controller + metrics. Poller: <code>occ nc_wireguard:poll-metrics</code>. Engine UI is unpublished; use this app for CRUD.</p>
+			<p class="muted">{{ t('nc_wireguard', 'Peer controller + metrics (v2.3). Poller: occ nc_wireguard:poll-metrics. Engine UI is unpublished; use this app for CRUD.') }}</p>
 
-			<h3>Dashboard</h3>
-			<label><input type="checkbox" v-model="settings.dashboard_enabled" /> Dashboard enabled</label>
-			<label>Engine admin URL (optional break-glass deep link)</label>
+			<h3>{{ t('nc_wireguard', 'Dashboard') }}</h3>
+			<label><input type="checkbox" v-model="settings.dashboard_enabled" /> {{ t('nc_wireguard', 'Dashboard enabled') }}</label>
+			<label>{{ t('nc_wireguard', 'Engine admin URL (optional break-glass deep link)') }}</label>
 			<input v-model="settings.wg_easy_admin_url" type="url" class="nc-wg-input" />
-			<label><input type="checkbox" v-model="settings.hide_wg_easy_admin_link" /> Hide engine admin link in dashboard (recommended)</label>
+			<label><input type="checkbox" v-model="settings.hide_wg_easy_admin_link" /> {{ t('nc_wireguard', 'Hide engine admin link in dashboard (recommended)') }}</label>
 
-			<h3>WireGuard engine API (poller + writes)</h3>
-			<label>Engine API URL (internal Docker)</label>
+			<h3>{{ t('nc_wireguard', 'WireGuard engine API (poller + writes)') }}</h3>
+			<label>{{ t('nc_wireguard', 'Engine API URL (internal Docker)') }}</label>
 			<input v-model="settings.wg_easy_api_url" type="url" class="nc-wg-input" />
-			<label>Engine username</label>
+			<label>{{ t('nc_wireguard', 'Engine username') }}</label>
 			<input v-model="settings.wg_easy_username" type="text" class="nc-wg-input" autocomplete="off" />
-			<label>Engine password <span v-if="settings.wg_easy_password_configured" class="muted">(configured — leave blank to keep)</span></label>
+			<label>{{ t('nc_wireguard', 'Engine password') }} <span v-if="settings.wg_easy_password_configured" class="muted">({{ t('nc_wireguard', 'configured — leave blank to keep') }})</span></label>
 			<input v-model="wgEasyPassword" type="password" class="nc-wg-input" autocomplete="new-password" />
-			<p class="muted">TOTP must stay <strong>off</strong> on the API service account.</p>
-			<label>Poll interval (seconds)</label>
+			<p class="muted">{{ t('nc_wireguard', 'TOTP must stay off on the API service account.') }}</p>
+			<label>{{ t('nc_wireguard', 'Poll interval (seconds)') }}</label>
 			<input v-model.number="settings.poll_interval_seconds" type="number" min="10" max="300" class="nc-wg-input" />
-			<label>Retention (days)</label>
+			<label>{{ t('nc_wireguard', 'Retention (days)') }}</label>
 			<input v-model.number="settings.retention_days" type="number" min="1" max="365" class="nc-wg-input" />
-			<label><input type="checkbox" v-model="settings.geoip_enabled" /> GeoIP lookups on connect (off by default)</label>
-			<p class="muted">When enabled, peer public IPs may be sent to a GeoIP provider. ip-api.com free tier is HTTP-only and non-commercial; use a Pro API key or custom HTTPS endpoint for production.</p>
-			<label>GeoIP provider</label>
+			<label><input type="checkbox" v-model="settings.geoip_enabled" /> {{ t('nc_wireguard', 'GeoIP lookups on connect (off by default)') }}</label>
+			<p class="muted">{{ t('nc_wireguard', 'When enabled, peer public IPs may be sent to a GeoIP provider. ip-api.com free tier is HTTP-only and non-commercial; use a Pro API key or custom HTTPS endpoint for production.') }}</p>
+			<label>{{ t('nc_wireguard', 'GeoIP provider') }}</label>
 			<select v-model="settings.geoip_provider" class="nc-wg-input">
 				<option value="ip_api">ip-api.com (default template)</option>
-				<option value="custom">Custom URL template</option>
+				<option value="custom">{{ t('nc_wireguard', 'Custom URL template') }}</option>
 			</select>
-			<label>GeoIP API key (ip-api Pro — optional)</label>
-			<input v-model="geoipApiKey" type="password" class="nc-wg-input" autocomplete="new-password" placeholder="Leave blank to keep existing" />
-			<label>Custom GeoIP URL (use {ip} and {fields} placeholders)</label>
+			<label>{{ t('nc_wireguard', 'GeoIP API key (ip-api Pro — optional)') }}</label>
+			<input v-model="geoipApiKey" type="password" class="nc-wg-input" autocomplete="new-password" :placeholder="t('nc_wireguard', 'Leave blank to keep existing')" />
+			<label>{{ t('nc_wireguard', 'Custom GeoIP URL (use {ip} and {fields} placeholders)') }}</label>
 			<input v-model="settings.geoip_custom_url" type="url" class="nc-wg-input" placeholder="https://example.com/geoip/{ip}?fields={fields}" />
 
-			<h3>Metrics health watchdog</h3>
-			<p class="muted">Background job logs stale polls and wg-easy failures (see Nextcloud log).</p>
-			<label><input type="checkbox" v-model="settings.watchdog_enabled" /> Watchdog job enabled</label>
-			<label>Watchdog interval (minutes)</label>
+			<h3>{{ t('nc_wireguard', 'Metrics health watchdog') }}</h3>
+			<p class="muted">{{ t('nc_wireguard', 'Background job logs stale polls and engine failures (see Nextcloud log).') }}</p>
+			<label><input type="checkbox" v-model="settings.watchdog_enabled" /> {{ t('nc_wireguard', 'Watchdog job enabled') }}</label>
+			<label>{{ t('nc_wireguard', 'Watchdog interval (minutes)') }}</label>
 			<input v-model.number="settings.watchdog_interval_minutes" type="number" min="1" max="60" class="nc-wg-input" />
 
 			<div class="nc-wg-admin-actions">
-				<button type="button" class="nc-wg-btn nc-wg-btn--primary" :disabled="saving" @click="save">Save</button>
-				<button type="button" class="nc-wg-btn" :disabled="testing" @click="test">Test native health</button>
-				<button type="button" class="nc-wg-btn" :disabled="testingWgEasy" @click="testWgEasy">Test wg-easy</button>
+				<button type="button" class="nc-wg-btn nc-wg-btn--primary" :disabled="saving" @click="save">{{ t('nc_wireguard', 'Save') }}</button>
+				<button type="button" class="nc-wg-btn" :disabled="testing" @click="test">{{ t('nc_wireguard', 'Test native health') }}</button>
+				<button type="button" class="nc-wg-btn" :disabled="testingWgEasy" @click="testWgEasy">{{ t('nc_wireguard', 'Test engine') }}</button>
 			</div>
 			<p v-if="message" class="ok">{{ message }}</p>
 			<p v-if="error" class="err">{{ error }}</p>
-			<pre v-if="testResult" class="nc-wg-test-result">Native health: {{ JSON.stringify(testResult, null, 2) }}</pre>
-			<pre v-if="wgEasyTestResult" class="nc-wg-test-result">wg-easy: {{ JSON.stringify(wgEasyTestResult, null, 2) }}</pre>
-			<p><a :href="generateUrl('/apps/nc_wireguard/')">Open dashboard</a></p>
-			<p class="muted nc-wg-legal">Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.</p>
+			<pre v-if="testResult" class="nc-wg-test-result">{{ t('nc_wireguard', 'Native health') }}: {{ JSON.stringify(testResult, null, 2) }}</pre>
+			<pre v-if="wgEasyTestResult" class="nc-wg-test-result">{{ t('nc_wireguard', 'Engine') }}: {{ JSON.stringify(wgEasyTestResult, null, 2) }}</pre>
+			<p><a :href="generateUrl('/apps/nc_wireguard/')">{{ t('nc_wireguard', 'Open dashboard') }}</a></p>
+			<p class="muted nc-wg-legal">{{ t('nc_wireguard', 'Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.') }}</p>
 		</div>
-		<p v-else>Loading…</p>
+		<p v-else>{{ t('nc_wireguard', 'Loading…') }}</p>
 	`,
 }
 

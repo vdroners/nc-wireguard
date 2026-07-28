@@ -4,8 +4,9 @@
 
 - Node.js ≥ 18, npm ≥ 9
 - Docker (`cloud_app` running for integration deploy)
-- NC-GCS repo at `/media/4TB/nc-gcs` (for `node_modules/.bin` on PATH via Makefile)
 - PHP 8.x + Composer optional (PHPUnit runs in Docker if host PHP missing)
+
+This app is **standalone**. You do **not** need a checkout of NC-GCS to install, build, or deploy.
 
 ## Repository layout
 
@@ -15,10 +16,10 @@ nc-wireguard/
 ├── css/               # SCSS sources (+ generated style.css)
 ├── js/                # Webpack output (gitignored)
 ├── lib/               # PHP — controllers, services, background job
-├── src/               # Vue frontend (app-owned code only)
+├── src/               # Vue frontend (app-owned)
 ├── templates/         # PHP page shells
 ├── tests/             # PHPUnit
-├── scripts/           # deploy, gate, bump, backup
+├── scripts/           # deploy, gate, bump, backup, export
 ├── docs/              # Architecture, API, runbook
 └── Makefile           # Primary entry points
 ```
@@ -26,26 +27,28 @@ nc-wireguard/
 ## Daily workflow
 
 ```bash
-# 1. Sync NC-GCS theme/shell if nc_gcs changed
-make sync-theme
-
-# 2. Install deps (first time or after package.json change)
+# 1. Install deps (first time or after package.json change)
 npm ci
+# If npm blocks install scripts for @nextcloud/webpack-vue-config,
+# approve them once: npm install-scripts approve <pkg>
 
-# 3. Dev watch (optional)
+# 2. Dev watch (optional)
 npm run dev
 
-# 4. Production build
+# 3. Production build
 make build
 
-# 5. Lint + unit tests
+# 4. Lint + unit tests
 make lint test
 
-# 6. Full gate (build, native smoke, phpunit, deploy)
+# 5. Full gate (build, native smoke, phpunit, deploy)
 make gate-local
 
 # Skip deploy during gate:
 SKIP_DEPLOY=1 make gate-local
+
+# Peer-write + public OTL smoke (engine reachable):
+GATE_PEER_WRITES=1 make gate-local
 ```
 
 ## Code conventions
@@ -57,12 +60,13 @@ SKIP_DEPLOY=1 make gate-local
 - **API calls** go through `services/dashboard-api.js` only.
 - **Formatting** — `utils/format.js` for bytes/time; `utils/peer.js` for peer badges/flags.
 - **Styles** — `css/nc-wireguard-theme.scss`; prefer NC CSS variables over hard-coded hex.
-- **ESLint** — `make lint` scopes to app code; `_nc_gcs_src_mirror` is ignored (upstream NC-GCS).
+- **Shell** — local `NcAppShell.vue` (`nc-wg-app-shell` DOM markers).
 
 ### Backend
 
 - `declare(strict_types=1);` on all PHP files.
 - Admin check before any dashboard API response.
+- Engine access goes through `WireGuardEngineInterface` (default `WgEasyEngine`).
 - New dashboard paths: add to `DashboardController` whitelist **and** [API_PARITY.md](API_PARITY.md).
 - Unit tests in `tests/Unit/` for sanitizers and pure logic.
 
@@ -87,9 +91,9 @@ Then `make build`, update README badge if present, `make gate-local`.
 1. `make lint test`
 2. `make gate-local` (or `SKIP_DEPLOY=1` then manual deploy)
 3. Browser smoke: all tabs at 375 / 768 / 1440 px, `#bandwidth` deep-link client filter, config modal copy toast
-4. `docker exec … smoke-peer-writes.php` and a public OTL curl without cookie
+4. `GATE_PEER_WRITES=1` peer-write + public OTL curl without cookie
 5. `docker exec cloud_app grep '<version>' /var/www/html/custom_apps/nc_wireguard/appinfo/info.xml`
-6. Commit with scoped message; tag; push `main`
+6. Commit with scoped message; tag matching `info.xml` version (e.g. `2.3.0`, not `v2.3.0`); push `main`
 
 ## Debugging
 
@@ -103,7 +107,7 @@ docker exec cloud_app php occ nc_wireguard:poll-metrics --no-lock
 # NC status (requires admin session cookie)
 curl -s -b cookies.txt 'https://cloud-vdroners.ddns.net/apps/nc_wireguard/api/status'
 
-# wg-easy from cloud container
+# Engine from cloud container (wg-easy today)
 docker exec cloud_app curl -sf http://wg-easy:51821/api/client
 ```
 
@@ -112,8 +116,7 @@ docker exec cloud_app curl -sf http://wg-easy:51821/api/client
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Empty client dropdown on Bandwidth | Summary not loaded at shell | Use `summaryStore.clients`; do not rely on Overview mount |
-| 502 from summary | wg-easy unreachable | Check API URL/credentials in admin settings |
+| 502 from summary | Engine unreachable | Check API URL/credentials in admin settings |
 | System tab empty | No host proc mount | Mount `/proc:/host/proc:ro` on `cloud_app` |
 | Stale charts | Poller not running | Install `nc-wireguard-poll-metrics.timer` |
-| ESLint scans mirror | Missing ignore | Use root `.eslintrc.js` ignorePatterns |
-| Build fails on `@/` imports | Stale mirror | `make sync-theme` |
+| Build missing terser/webpack peers | npm blocked install scripts | Approve `@nextcloud/webpack-vue-config` scripts; ensure `terser-webpack-plugin` is installed |

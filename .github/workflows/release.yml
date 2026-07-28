@@ -53,14 +53,31 @@ jobs:
             bash -c 'cp /var/www/html/custom_apps/nc_wireguard/scripts/file_from_env.php /tmp/file_from_env.php && php occ integrity:sign-app --privateKey="file:///tmp/file_from_env.php" --certificate="file:///tmp/file_from_env.php" nc_wireguard'
           tar -czf "/tmp/nc_wireguard-${VERSION}.tar.gz" -C /tmp "nc_wireguard-${VERSION}"
 
+      # Tarball name MUST match info.xml version (e.g. nc_wireguard-2.3.0.tar.gz).
+      # Release tags should be the bare semver (2.3.0). If the tag is v2.3.0, we still
+      # publish the asset as nc_wireguard-<info.xml version>.tar.gz and point the
+      # App Store download_url at that filename.
+      - name: Normalize release asset name
+        id: asset
+        run: |
+          VERSION=$(grep -oE '<version>[0-9]+\.[0-9]+\.[0-9]+</version>' appinfo/info.xml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          TAG="${{ github.event.release.tag_name }}"
+          TAG_STRIPPED="${TAG#v}"
+          if [[ "$TAG_STRIPPED" != "$VERSION" ]]; then
+            echo "::warning::Release tag '$TAG' != info.xml version '$VERSION' — asset uses info.xml version"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tarball=/tmp/nc_wireguard-${VERSION}.tar.gz" >> "$GITHUB_OUTPUT"
+          test -f "/tmp/nc_wireguard-${VERSION}.tar.gz"
+
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: /tmp/nc_wireguard-*.tar.gz
+          files: ${{ steps.asset.outputs.tarball }}
 
       - name: Push to Nextcloud App Store
         uses: R0Wi/nextcloud-appstore-push-action@v1
         with:
           app_name: nc_wireguard
           appstore_token: ${{ secrets.APPSTORE_TOKEN }}
-          download_url: ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/nc_wireguard-${{ github.event.release.tag_name }}.tar.gz
+          download_url: ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/nc_wireguard-${{ steps.asset.outputs.version }}.tar.gz

@@ -6,10 +6,11 @@ namespace OCA\NcWireguard\Tests\Unit\Controller;
 
 use OCA\NcWireguard\Controller\PeerWriteController;
 use OCA\NcWireguard\Service\AppSettings;
+use OCA\NcWireguard\Service\NcOtlService;
 use OCA\NcWireguard\Service\OtlRedeemRateLimiter;
 use OCA\NcWireguard\Service\OtlRedeemTracker;
 use OCA\NcWireguard\Service\PeerFieldValidator;
-use OCA\NcWireguard\Service\WgEasyClient;
+use OCA\NcWireguard\Tests\Unit\FakeWireGuardEngine;
 use OCP\IGroupManager;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -29,6 +30,7 @@ final class PeerWriteControllerGateTest extends TestCase
 		?string $uid,
 		bool $isAdmin,
 		bool $dashboardEnabled,
+		bool $writesFrozen = false,
 	): PeerWriteController {
 		$session = $this->createMock(IUserSession::class);
 		if ($uid === null) {
@@ -44,12 +46,14 @@ final class PeerWriteControllerGateTest extends TestCase
 
 		$settings = $this->createMock(AppSettings::class);
 		$settings->method('isDashboardEnabled')->willReturn($dashboardEnabled);
+		$settings->method('arePeerWritesFrozen')->willReturn($writesFrozen);
 
 		return new PeerWriteController(
 			$this->createMock(IRequest::class),
 			$settings,
-			$this->createMock(WgEasyClient::class),
+			new FakeWireGuardEngine(),
 			$this->createMock(PeerFieldValidator::class),
+			$this->createMock(NcOtlService::class),
 			$this->createMock(OtlRedeemRateLimiter::class),
 			$this->createMock(OtlRedeemTracker::class),
 			$groups,
@@ -59,9 +63,9 @@ final class PeerWriteControllerGateTest extends TestCase
 		);
 	}
 
-	private function invokeGate(PeerWriteController $controller): mixed
+	private function invokeGate(PeerWriteController $controller, string $gate = 'gate'): mixed
 	{
-		$method = (new ReflectionClass($controller))->getMethod('gate');
+		$method = (new ReflectionClass($controller))->getMethod($gate);
 		$method->setAccessible(true);
 		return $method->invoke($controller);
 	}
@@ -92,5 +96,33 @@ final class PeerWriteControllerGateTest extends TestCase
 	public function testAdminPassesWhenDashboardEnabled(): void
 	{
 		self::assertNull($this->invokeGate($this->makeController('admin', true, true)));
+	}
+
+	public function testCutoverFreezeBlocksWrites(): void
+	{
+		$controller = $this->makeController('admin', true, true, true);
+
+		$resp = $this->invokeGate($controller, 'writeGate');
+
+		self::assertNotNull($resp);
+		self::assertSame(503, $resp->getStatus());
+		self::assertSame('writes_frozen', $resp->getData()['reason']);
+	}
+
+	public function testCutoverFreezeLeavesReadsAlone(): void
+	{
+		// Config downloads and OTL redeems run on the plain gate: a field user
+		// redeeming a link they already hold does not put the peer store and
+		// the engine out of step, which is the only thing the freeze protects.
+		$controller = $this->makeController('admin', true, true, true);
+
+		self::assertNull($this->invokeGate($controller));
+	}
+
+	public function testWritesPassWhenNotFrozen(): void
+	{
+		$controller = $this->makeController('admin', true, true);
+
+		self::assertNull($this->invokeGate($controller, 'writeGate'));
 	}
 }

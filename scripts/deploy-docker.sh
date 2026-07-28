@@ -12,8 +12,7 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
 fi
 
 if [[ -f "$ROOT/package.json" ]] && [[ "${SKIP_NPM_BUILD:-0}" != "1" ]]; then
-  NC_GCS_NM="/media/4TB/nc-gcs/apps/nc_gcs/node_modules"
-  export PATH="${NC_GCS_NM}/.bin:${ROOT}/node_modules/.bin:${PATH}"
+  export PATH="${ROOT}/node_modules/.bin:${PATH}"
   (cd "$ROOT" && npm run build)
 fi
 

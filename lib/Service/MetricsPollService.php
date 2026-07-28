@@ -19,12 +19,15 @@ use OCA\NcWireguard\Util\EndpointIp;
 use Psr\Log\LoggerInterface;
 
 /**
- * Single poll cycle: wg-easy clients → bandwidth + connection FSM + system metrics + heartbeat.
+ * Single poll cycle: engine peers → bandwidth + connection FSM + system metrics + heartbeat.
+ *
+ * Metrics rows stay keyed by the engine's integer peer id; the public-key
+ * identity exposed by `getRuntimeStats()` lands in a later schema change.
  */
 class MetricsPollService
 {
 	public function __construct(
-		private WgEasyClient $wgEasyClient,
+		private WireGuardEngineInterface $engine,
 		private ConnectionStateMachine $fsm,
 		private GeoIpService $geoIp,
 		private SystemMetricsCollector $systemMetrics,
@@ -45,7 +48,7 @@ class MetricsPollService
 		$now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
 		$nowDt = \DateTime::createFromImmutable($now);
 
-		$clients = $this->wgEasyClient->getClients();
+		$clients = $this->engine->listPeers();
 		if ($clients === null) {
 			$this->heartbeatMapper->recordPoll($nowDt, false, false, 'wg-easy unreachable');
 			return [

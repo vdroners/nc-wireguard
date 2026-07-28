@@ -19,6 +19,9 @@ class SecretCrypto
 	/** @var list<string> */
 	public const SECRET_KEYS = [
 		'wg_easy_password',
+		// P6 rename of wg_easy_password; both are read, see AppSettings::SETTING_ALIASES.
+		'engine_password',
+		'wg_sync_token',
 		'geoip_api_key',
 	];
 

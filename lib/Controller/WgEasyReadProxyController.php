@@ -6,7 +6,7 @@ namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
 use OCA\NcWireguard\Service\AppSettings;
-use OCA\NcWireguard\Service\WgEasyClient;
+use OCA\NcWireguard\Service\WireGuardEngineInterface;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
@@ -22,7 +22,7 @@ class WgEasyReadProxyController extends Controller
 	public function __construct(
 		IRequest $request,
 		private AppSettings $appSettings,
-		private WgEasyClient $wgEasyClient,
+		private WireGuardEngineInterface $engine,
 		private IGroupManager $groupManager,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
@@ -74,7 +74,7 @@ class WgEasyReadProxyController extends Controller
 			return new JSONResponse(['message' => 'Invalid client id'], Http::STATUS_BAD_REQUEST);
 		}
 
-		$result = $this->wgEasyClient->getClientConfiguration($clientId);
+		$result = $this->engine->getConfiguration($clientId);
 		if (!$result['ok'] || $result['body'] === false) {
 			$this->logger->error('wg-easy configuration fetch failed', [
 				'clientId' => $clientId,
@@ -86,7 +86,7 @@ class WgEasyReadProxyController extends Controller
 			);
 		}
 
-		$data = $this->wgEasyClient->formatConfigurationBody(
+		$data = $this->engine->formatConfigurationBody(
 			(string) $result['body'],
 			$result['is_json']
 		);

@@ -4,12 +4,14 @@
 	<id>nc_wireguard</id>
 	<name>NC WireGuard</name>
 	<summary>Control and monitor WireGuard VPN peers inside Nextcloud</summary>
-	<description><![CDATA[Peer controller and metrics for a wg-easy WireGuard engine: create/edit peers, bandwidth history, connection events, optional GeoIP map, and server metrics inside Nextcloud.
+	<description><![CDATA[Peer controller and metrics for an external WireGuard engine: create/edit peers, bandwidth history, connection events, optional GeoIP map, and server metrics inside Nextcloud.
+
+Requires a reachable WireGuard engine (URL + credentials). Today that is typically wg-easy; a thin wg-sync sidecar is the migration path. This is not a one-click VPN appliance and does not embed the dataplane.
 
 Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.
 
-Optional NC-GCS theming when that app is installed; works standalone without NC-GCS. Admin-only access.]]></description>
-	<version>2.2.0</version>
+Standalone Nextcloud app. Admin-only access.]]></description>
+	<version>2.3.0</version>
 	<licence>agpl</licence>
 	<author mail="dan@19labs.com">19labs</author>
 	<namespace>NcWireguard</namespace>
@@ -45,6 +47,9 @@ Optional NC-GCS theming when that app is installed; works standalone without NC-
 		<command>OCA\NcWireguard\Command\PruneMetricsCommand</command>
 		<command>OCA\NcWireguard\Command\ImportSidecarDbCommand</command>
 		<command>OCA\NcWireguard\Command\VerifyImportCommand</command>
+		<command>OCA\NcWireguard\Command\ImportPeersFromEngineCommand</command>
+		<command>OCA\NcWireguard\Command\SetServerKeyCommand</command>
+		<command>OCA\NcWireguard\Command\RemapMetricsPeerIdsCommand</command>
 	</commands>
 	<settings>
 		<admin>OCA\NcWireguard\Settings\AdminSettings</admin>

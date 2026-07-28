@@ -25,6 +25,9 @@ class UninstallCleanupListener implements IEventListener
 		'nc_wg_system_metrics',
 		'nc_wg_poll_state',
 		'nc_wg_metrics_heartbeat',
+		'nc_wg_peer_secrets',
+		'nc_wg_peers',
+		'nc_wg_server',
 	];
 
 	public function __construct(

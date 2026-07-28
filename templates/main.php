@@ -3,7 +3,7 @@
 ?>
 <div
 	id="nc-wireguard-root"
-	class="nc-gcs-app-shell nc-gcs-app-shell--nc_wireguard"
+	class="nc-wg-app-shell nc-wg-app-shell--nc_wireguard"
 	data-app-id="nc_wireguard"
 	data-enabled="<?php echo !empty($_['enabled']) ? '1' : '0'; ?>"
 	data-wg-easy-url="<?php echo htmlspecialchars((string)($_['wg_easy_admin_url'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"

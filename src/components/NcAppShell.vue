@@ -57,18 +57,18 @@ export default {
 
 <template>
 	<div
-		class="nc-gcs-app-shell"
-		:class="[`nc-gcs-app-shell--${appId}`, shellThemeClass]"
+		class="nc-wg-app-shell"
+		:class="[`nc-wg-app-shell--${appId}`, shellThemeClass]"
 		:data-app-id="appId"
-		:data-nc-gcs-theme="shellThemeAttr"
+		:data-nc-wg-theme="shellThemeAttr"
 		:data-theme="shellThemeAttr"
 		:style="shellStyle">
-		<header v-if="!hideBanner" class="nc-gcs-app-shell__banner">
-			<span class="nc-gcs-app-shell__banner-icon" aria-hidden="true">
+		<header v-if="!hideBanner" class="nc-wg-app-shell__banner">
+			<span class="nc-wg-app-shell__banner-icon" aria-hidden="true">
 				<slot name="banner-icon">
 					<svg
 						v-if="bannerIconSvg"
-						class="nc-gcs-app-shell__banner-icon-svg"
+						class="nc-wg-app-shell__banner-icon-svg"
 						viewBox="0 0 24 24"
 						width="22"
 						height="22"
@@ -78,15 +78,15 @@ export default {
 					<template v-else>{{ bannerIconLetter }}</template>
 				</slot>
 			</span>
-			<h1 class="nc-gcs-app-shell__banner-title">{{ title }}</h1>
-			<span v-if="subtitle || $slots['banner-extra']" class="nc-gcs-app-shell__banner-subtitle">
+			<h1 class="nc-wg-app-shell__banner-title">{{ title }}</h1>
+			<span v-if="subtitle || $slots['banner-extra']" class="nc-wg-app-shell__banner-subtitle">
 				<slot name="banner-extra">{{ subtitle }}</slot>
 			</span>
 		</header>
-		<div class="nc-gcs-app-shell__body">
+		<div class="nc-wg-app-shell__body">
 			<slot />
 		</div>
-		<footer v-if="$slots.footer" class="nc-gcs-app-shell__footer">
+		<footer v-if="$slots.footer" class="nc-wg-app-shell__footer">
 			<slot name="footer" />
 		</footer>
 	</div>

@@ -1,6 +1,6 @@
 # NC WireGuard
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue)](appinfo/info.xml)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue)](appinfo/info.xml)
 
 Nextcloud **peer controller and metrics dashboard** for a **wg-easy** WireGuard
 engine. Admin-only SPA: create/edit/enable/disable peers, Field/Admin presets,
