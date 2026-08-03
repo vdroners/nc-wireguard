@@ -28,15 +28,18 @@ class VerifyImportCommand extends Command
 			->setDescription('Compare sidecar SQLite row counts against NC native tables')
 			->addArgument(
 				'sqlite-path',
-				InputArgument::OPTIONAL,
-				'Path to dashboard.db',
-				SidecarImportService::DEFAULT_SQLITE_PATH
+				InputArgument::REQUIRED,
+				'Absolute path to dashboard.db (no default — configure explicitly)'
 			);
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int
 	{
-		$path = (string) $input->getArgument('sqlite-path');
+		$path = trim((string) $input->getArgument('sqlite-path'));
+		if ($path === '') {
+			$output->writeln('<error>sqlite-path is required (no lab host default).</error>');
+			return Command::FAILURE;
+		}
 		try {
 			$result = $this->importService->verify($path);
 		} catch (RuntimeException $e) {

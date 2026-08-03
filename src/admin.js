@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import axios from '@nextcloud/axios'
 import { generateUrl } from '@nextcloud/router'
+// @nextcloud/axios attaches the Nextcloud requesttoken (CSRF) on mutating calls.
 
 const el = document.getElementById('nc-wireguard-admin-root')
 
@@ -60,11 +61,24 @@ const AdminPanel = {
 			delete body.geoip_api_key_configured
 			return body
 		},
+		ensurePasswordConfirmed() {
+			// PasswordConfirmationRequired on saveSettings — use core OC helper
+			// (avoids bundling @nextcloud/dialogs into the admin entry).
+			return new Promise((resolve, reject) => {
+				const oc = typeof window !== 'undefined' ? window.OC : undefined
+				if (oc?.PasswordConfirmation?.requirePasswordConfirmation) {
+					oc.PasswordConfirmation.requirePasswordConfirmation(resolve, {}, reject)
+					return
+				}
+				resolve()
+			})
+		},
 		async save() {
 			this.saving = true
 			this.message = ''
 			this.error = ''
 			try {
+				await this.ensurePasswordConfirmed()
 				const { data } = await this.api('', { method: 'PUT', data: this.payloadForSave() })
 				this.settings = data
 				this.wgEasyPassword = ''
@@ -93,6 +107,7 @@ const AdminPanel = {
 			this.wgEasyTestResult = null
 			try {
 				if (this.wgEasyPassword) {
+					await this.ensurePasswordConfirmed()
 					await this.api('', { method: 'PUT', data: this.payloadForSave() })
 				}
 				const { data } = await this.api('/test-wg-easy', { method: 'POST' })
@@ -110,7 +125,7 @@ const AdminPanel = {
 	template: `
 		<div class="nc-wireguard-admin-panel" v-if="!loading">
 			<h2>NC WireGuard</h2>
-			<p class="muted">{{ t('nc_wireguard', 'Peer controller + metrics (v2.3). Poller: occ nc_wireguard:poll-metrics. Engine UI is unpublished; use this app for CRUD.') }}</p>
+			<p class="muted">{{ t('nc_wireguard', 'Peer controller + metrics (v2.3.1). Poller: occ nc_wireguard:poll-metrics. Engine UI is unpublished; use this app for CRUD.') }}</p>
 
 			<h3>{{ t('nc_wireguard', 'Dashboard') }}</h3>
 			<label><input type="checkbox" v-model="settings.dashboard_enabled" /> {{ t('nc_wireguard', 'Dashboard enabled') }}</label>

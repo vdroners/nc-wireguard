@@ -3,15 +3,19 @@
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>nc_wireguard</id>
 	<name>NC WireGuard</name>
-	<summary>Control and monitor WireGuard VPN peers inside Nextcloud</summary>
-	<description><![CDATA[Peer controller and metrics for an external WireGuard engine: create/edit peers, bandwidth history, connection events, optional GeoIP map, and server metrics inside Nextcloud.
+	<summary>Control and monitor an external WireGuard engine from Nextcloud</summary>
+	<description><![CDATA[NC WireGuard is a Nextcloud admin UI for an **external** WireGuard engine. It does **not** ship or run a VPN dataplane itself.
 
-Requires a reachable WireGuard engine (URL + credentials). Today that is typically wg-easy; a thin wg-sync sidecar is the migration path. This is not a one-click VPN appliance and does not embed the dataplane.
+Today the supported engine is [wg-easy](https://github.com/wg-easy/wg-easy) (configure its API URL and credentials in Administration settings). An optional thin wg-sync sidecar is a lab/migration path only.
+
+Features: create/edit/enable/disable peers, Field/Admin presets, one-time config links, bandwidth and connection history, optional GeoIP map, and host metrics polling into Nextcloud tables.
+
+**Privacy:** GeoIP is off by default. When enabled, peer public endpoint IPs may be sent to the configured GeoIP provider. Engine credentials are stored in Nextcloud appconfig (password confirmation required to save).
 
 Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.
 
-Standalone Nextcloud app. Admin-only access.]]></description>
-	<version>2.3.0</version>
+Admin-only access. Requires a reachable engine before the dashboard is useful — see INSTALL.md.]]></description>
+	<version>2.3.1</version>
 	<licence>agpl</licence>
 	<author mail="dan@19labs.com">19labs</author>
 	<namespace>NcWireguard</namespace>
@@ -19,7 +23,10 @@ Standalone Nextcloud app. Admin-only access.]]></description>
 	<website>https://github.com/vdroners/nc-wireguard</website>
 	<bugs>https://github.com/vdroners/nc-wireguard/issues</bugs>
 	<repository type="git">https://github.com/vdroners/nc-wireguard.git</repository>
-	<documentation>https://github.com/vdroners/nc-wireguard/blob/main/README.md</documentation>
+	<documentation>
+		<user>https://github.com/vdroners/nc-wireguard/blob/main/README.md</user>
+		<admin>https://github.com/vdroners/nc-wireguard/blob/main/INSTALL.md</admin>
+	</documentation>
 	<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/overview.png</screenshot>
 	<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/map.png</screenshot>
 	<dependencies>

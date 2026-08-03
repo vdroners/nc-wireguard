@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-08-03
+
+### Security / packaging (App Store readiness)
+
+- CSRF restored on `saveSettings` / engine test endpoints; `#[PasswordConfirmationRequired]`
+  on settings save (engine password / GeoIP key); `#[UserRateLimit]` on connection probes
+- Admin settings use `@nextcloud/axios` requesttoken + core `OC.PasswordConfirmation`
+- `SidecarImportService` no longer defaults to a lab `/media/4TB/...` SQLite path;
+  `import-sidecar-db` / `verify-import` require an explicit path
+- `make appstore` excludes `services/`, `docs/ops/`, `scripts/`, `src/`, `.github`, tests
+- Nested `<documentation><user>/<admin>` in `info.xml`; clearer external-engine + privacy copy
+- Stranger install path documented in `INSTALL.md` (upstream `ghcr.io/wg-easy/wg-easy:15`)
+
 ## [2.3.0] - 2026-07-27
 
 ### Added — standalone finish (S1–S4)

@@ -33,9 +33,9 @@ final class SidecarImportKeysTest extends TestCase
 		self::assertSame('2026-06-18 14:22:40', $fromMysql);
 	}
 
-	public function testDefaultSqlitePath(): void
+	public function testDefaultSqlitePathRequiresExplicitConfig(): void
 	{
-		self::assertStringContainsString('dashboard.db', SidecarImportService::DEFAULT_SQLITE_PATH);
+		self::assertSame('', SidecarImportService::DEFAULT_SQLITE_PATH);
 	}
 
 	public function testPollStateDerivationFromConnectionLog(): void

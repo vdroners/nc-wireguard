@@ -28,15 +28,18 @@ class ImportSidecarDbCommand extends Command
 			->setDescription('Import sidecar SQLite metrics into NC native tables (idempotent)')
 			->addArgument(
 				'sqlite-path',
-				InputArgument::OPTIONAL,
-				'Path to dashboard.db',
-				SidecarImportService::DEFAULT_SQLITE_PATH
+				InputArgument::REQUIRED,
+				'Absolute path to dashboard.db (no default — configure explicitly)'
 			);
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int
 	{
-		$path = (string) $input->getArgument('sqlite-path');
+		$path = trim((string) $input->getArgument('sqlite-path'));
+		if ($path === '') {
+			$output->writeln('<error>sqlite-path is required (no lab host default).</error>');
+			return Command::FAILURE;
+		}
 		try {
 			$result = $this->importService->import($path);
 		} catch (RuntimeException $e) {

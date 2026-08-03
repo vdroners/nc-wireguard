@@ -35,14 +35,25 @@ test:
 	fi
 
 # Assemble a self-contained release directory (built js/css + vendor, no node_modules).
+# Lab-only trees (services/, docs/ops/, scripts/, src/) stay in git but out of the tarball.
 appstore: build
 	rm -rf "$(STAGING)"
 	mkdir -p "$(STAGING)"
 	rsync -a --delete \
-		--exclude node_modules --exclude tests --exclude .git --exclude .backups \
+		--exclude node_modules --exclude tests --exclude .git --exclude .github \
+		--exclude .cursor --exclude .backups --exclude services --exclude scripts \
+		--exclude src --exclude docs/ops \
 		--exclude .phpunit.cache --exclude .phpunit.result.cache \
+		--exclude .eslintrc.js --exclude webpack.config.js --exclude phpunit.xml.dist \
+		--exclude package-lock.json \
 		"$(ROOT)" "$(STAGING)/"
-	cd "$(STAGING)" && composer install --no-dev --no-interaction --optimize-autoloader
+	@if command -v composer >/dev/null 2>&1; then \
+		cd "$(STAGING)" && composer install --no-dev --no-interaction --optimize-autoloader; \
+	else \
+		echo "composer not on PATH — running in the composer:2 container"; \
+		docker run --rm -v "$(STAGING):/app" -w /app composer:2 \
+			composer install --no-dev --no-interaction --optimize-autoloader; \
+	fi
 	rm -rf "$(STAGING)/node_modules"
 	tar -czf "$(TARBALL)" -C /tmp "$(APP_ID)-$(VERSION)"
 	@echo "Release tarball: $(TARBALL)"

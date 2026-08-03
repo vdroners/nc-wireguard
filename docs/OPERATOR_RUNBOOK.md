@@ -150,14 +150,15 @@ Backs up `nc_wg_*` MySQL tables, wg-easy DB, and `occ config:list` snapshot.
 
 ## One-time migration import
 
-If upgrading from pre-v2.0 sidecar SQLite:
+If upgrading from pre-v2.0 sidecar SQLite, pass an **explicit** absolute path
+(there is no built-in host default):
 
 ```bash
 docker exec cloud_app php occ nc_wireguard:import-sidecar-db /path/to/dashboard.db
 docker exec cloud_app php occ nc_wireguard:verify-import /path/to/dashboard.db
 ```
 
-Archived sidecar source lives at `/media/4TB/wireguard/dashboard.archived/` (not deployed).
+Both arguments are **required** (no lab-host default path).
 
 ## Sign-off checklist
 

@@ -278,6 +278,26 @@ if (!class_exists(NoCSRFRequired::class)) {
 	}
 }
 
+if (!class_exists(PasswordConfirmationRequired::class)) {
+	#[\Attribute]
+	class PasswordConfirmationRequired
+	{
+		public function __construct(protected bool $strict = false)
+		{
+		}
+	}
+}
+
+if (!class_exists(UserRateLimit::class)) {
+	#[\Attribute]
+	class UserRateLimit
+	{
+		public function __construct(protected int $limit, protected int $period)
+		{
+		}
+	}
+}
+
 if (!class_exists(PublicPage::class)) {
 	#[\Attribute]
 	class PublicPage

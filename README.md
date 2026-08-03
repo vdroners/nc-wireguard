@@ -1,6 +1,6 @@
 # NC WireGuard
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue)](appinfo/info.xml)
+[![Version](https://img.shields.io/badge/version-2.3.1-blue)](appinfo/info.xml)
 
 Nextcloud **peer controller and metrics dashboard** for a **wg-easy** WireGuard
 engine. Admin-only SPA: create/edit/enable/disable peers, Field/Admin presets,
@@ -30,12 +30,15 @@ Amnezia. Portainer has no WireGuard surface on the lab host.
 
 ## Quick start
 
+Stranger / App Store path: **[INSTALL.md](INSTALL.md)** — upstream
+`ghcr.io/wg-easy/wg-easy:15`, admin engine URL, optional wg-sync note.
+
 1. Install and enable the app from the Nextcloud App Store or a signed release tarball.
 2. Open **Settings → Administration → NC WireGuard**.
-3. Set the **wg-easy API URL** (internal, reachable from the Nextcloud server), username, and password.
-4. Keep the wg-easy service account **without 2FA** (API sessions cannot use TOTP).
-5. Leave **Hide wg-easy admin link** on after cutover; set an admin URL only for break-glass.
-6. Run the poller on a schedule, e.g. `occ nc_wireguard:poll-metrics` (see `docs/ops/` for systemd units).
+3. Set the **Engine API URL** (reachable from the Nextcloud server), username, and password.
+4. Keep the engine service account **without 2FA** (API sessions cannot use TOTP).
+5. Leave **Hide engine admin link** on after cutover; set an admin URL only for break-glass.
+6. Run the poller on a schedule, e.g. `occ nc_wireguard:poll-metrics`.
 
 Hash routes: `#overview`, `#bandwidth`, `#connections`, `#map`, `#system`.
 

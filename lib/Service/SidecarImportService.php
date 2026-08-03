@@ -26,7 +26,8 @@ use RuntimeException;
  */
 class SidecarImportService
 {
-	public const DEFAULT_SQLITE_PATH = '/media/4TB/wireguard/dashboard/data/dashboard.db';
+	/** Empty by design — operators must pass an explicit path (no lab host default). */
+	public const DEFAULT_SQLITE_PATH = '';
 
 	public function __construct(
 		private IDBConnection $db,

@@ -12,6 +12,8 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\AdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\PasswordConfirmationRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
 use OCP\IRequest;
@@ -55,7 +57,7 @@ class SettingsController extends Controller
 	}
 
 	#[AdminRequired]
-	#[NoCSRFRequired]
+	#[PasswordConfirmationRequired]
 	public function saveSettings(): JSONResponse
 	{
 		$body = file_get_contents('php://input');
@@ -111,7 +113,7 @@ class SettingsController extends Controller
 	}
 
 	#[AdminRequired]
-	#[NoCSRFRequired]
+	#[UserRateLimit(limit: 10, period: 60)]
 	public function testConnection(): JSONResponse
 	{
 		$appVersion = $this->config->getAppValue(Application::APP_ID, 'installed_version', '');
@@ -130,7 +132,7 @@ class SettingsController extends Controller
 	}
 
 	#[AdminRequired]
-	#[NoCSRFRequired]
+	#[UserRateLimit(limit: 10, period: 60)]
 	public function testWgEasy(): JSONResponse
 	{
 		$result = $this->wgEasyProbe->testSession();
