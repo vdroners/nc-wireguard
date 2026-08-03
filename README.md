@@ -91,7 +91,9 @@ More: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 ## App Store publication
 
 See [docs/APPSTORE_ONBOARDING.md](docs/APPSTORE_ONBOARDING.md) for signing,
-release automation, and store listing steps.
+release automation, and store listing steps. L10n scaffolding and Psalm baseline
+notes: [docs/STATIC_ANALYSIS.md](docs/STATIC_ANALYSIS.md) (full Vue `t()` wrapping
+is follow-up).
 
 ## Licence
 
