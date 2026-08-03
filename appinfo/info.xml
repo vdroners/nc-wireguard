@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
-	<id>nc_wireguard</id>
-	<name>NC WireGuard</name>
-	<summary>Control and monitor an external WireGuard engine from Nextcloud</summary>
-	<description><![CDATA[NC WireGuard is a Nextcloud admin UI for an **external** WireGuard engine. It does **not** ship or run a VPN dataplane itself.
+<id>nc_wireguard</id>
+<name>NC WireGuard</name>
+<summary>Control and monitor an external WireGuard engine from Nextcloud</summary>
+<description><![CDATA[NC WireGuard is a Nextcloud admin UI for an **external** WireGuard engine. It does **not** ship or run a VPN dataplane itself.
 
 Today the supported engine is [wg-easy](https://github.com/wg-easy/wg-easy) (configure its API URL and credentials in Administration settings). An optional thin wg-sync sidecar is a lab/migration path only.
 
@@ -15,21 +15,21 @@ Features: create/edit/enable/disable peers, Field/Admin presets, one-time config
 Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.
 
 Admin-only access. Requires a reachable engine before the dashboard is useful â€” see INSTALL.md.]]></description>
-	<version>2.3.1</version>
-	<licence>agpl</licence>
-	<author mail="dan@19labs.com">19labs</author>
-	<namespace>NcWireguard</namespace>
-	<category>tools</category>
-	<website>https://github.com/vdroners/nc-wireguard</website>
-	<bugs>https://github.com/vdroners/nc-wireguard/issues</bugs>
-	<repository type="git">https://github.com/vdroners/nc-wireguard.git</repository>
-	<documentation>
+<version>2.3.1</version>
+<licence>agpl</licence>
+<author mail="dan@19labs.com">19labs</author>
+<namespace>NcWireguard</namespace>
+<documentation>
 		<user>https://github.com/vdroners/nc-wireguard/blob/main/README.md</user>
 		<admin>https://github.com/vdroners/nc-wireguard/blob/main/INSTALL.md</admin>
 	</documentation>
-	<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/overview.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/map.png</screenshot>
-	<dependencies>
+<category>tools</category>
+<website>https://github.com/vdroners/nc-wireguard</website>
+<bugs>https://github.com/vdroners/nc-wireguard/issues</bugs>
+<repository type="git">https://github.com/vdroners/nc-wireguard.git</repository>
+<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/overview.png</screenshot>
+<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/map.png</screenshot>
+<dependencies>
 		<php min-version="8.1" max-version="8.4"/>
 		<database>sqlite</database>
 		<database>mysql</database>
@@ -37,18 +37,10 @@ Admin-only access. Requires a reachable engine before the dashboard is useful â€
 		<lib>curl</lib>
 		<nextcloud min-version="28" max-version="34"/>
 	</dependencies>
-	<navigations>
-		<navigation>
-			<name>NC WireGuard</name>
-			<route>nc_wireguard.page.index</route>
-			<icon>app.svg</icon>
-			<order>74</order>
-		</navigation>
-	</navigations>
-	<background-jobs>
+<background-jobs>
 		<job>OCA\NcWireguard\BackgroundJob\MetricsHealthJob</job>
 	</background-jobs>
-	<commands>
+<commands>
 		<command>OCA\NcWireguard\Command\SchemaCheckCommand</command>
 		<command>OCA\NcWireguard\Command\PollMetricsCommand</command>
 		<command>OCA\NcWireguard\Command\PruneMetricsCommand</command>
@@ -58,8 +50,16 @@ Admin-only access. Requires a reachable engine before the dashboard is useful â€
 		<command>OCA\NcWireguard\Command\SetServerKeyCommand</command>
 		<command>OCA\NcWireguard\Command\RemapMetricsPeerIdsCommand</command>
 	</commands>
-	<settings>
+<settings>
 		<admin>OCA\NcWireguard\Settings\AdminSettings</admin>
 		<admin-section>OCA\NcWireguard\Settings\AdminSection</admin-section>
 	</settings>
+<navigations>
+		<navigation>
+			<name>NC WireGuard</name>
+			<route>nc_wireguard.page.index</route>
+			<icon>app.svg</icon>
+			<order>74</order>
+		</navigation>
+	</navigations>
 </info>

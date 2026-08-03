@@ -1,7 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
 ## [2.3.1] - 2026-08-03
 
 ### Security / packaging (App Store readiness)
