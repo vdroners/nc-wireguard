@@ -27,8 +27,8 @@ Admin-only access. Requires a reachable engine before the dashboard is useful â€
 <website>https://github.com/vdroners/nc-wireguard</website>
 <bugs>https://github.com/vdroners/nc-wireguard/issues</bugs>
 <repository type="git">https://github.com/vdroners/nc-wireguard.git</repository>
-<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/overview.png</screenshot>
-<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/main/docs/screenshots/map.png</screenshot>
+<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/refs/heads/main/docs/screenshots/overview.png</screenshot>
+<screenshot>https://raw.githubusercontent.com/vdroners/nc-wireguard/refs/heads/main/docs/screenshots/map.png</screenshot>
 <dependencies>
 		<php min-version="8.1"/>
 		<database>sqlite</database>
