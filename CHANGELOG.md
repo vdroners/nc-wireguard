@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.2] - 2026-08-03
+
+### Fixed
+
+- Drop PHP `max-version` so the app enables on Nextcloud 34 (PHP 8.5).
+
 ## [2.3.1] - 2026-08-03
 
 ### Security / packaging (App Store readiness)
