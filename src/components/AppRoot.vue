@@ -2,7 +2,6 @@
 	<NcAppShell
 		:app-id="'nc_wireguard'"
 		title="NC WireGuard"
-		accent="#dc2626"
 		:subtitle="subtitle">
 		<template #banner-extra>
 			<div class="nc-wg-banner-extra">

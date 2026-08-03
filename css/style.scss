@@ -6,11 +6,12 @@
 }
 
 .nc-wg-app-shell--nc_wireguard {
-	--gcs-accent: #dc2626;
+	--nc-app-accent: var(--color-primary-element);
+	--gcs-accent: var(--color-primary-element);
 }
 
 .nc-wg-disclaimer {
 	margin: 1rem 1.5rem 2rem;
 	font-size: 0.75rem;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--color-text-maxcontrast);
 }

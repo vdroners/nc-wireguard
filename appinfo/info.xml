@@ -15,8 +15,8 @@ Features: create/edit/enable/disable peers, Field/Admin presets, one-time config
 Not affiliated with or endorsed by WireGuard or wg-easy. WireGuard is a registered trademark of Jason A. Donenfeld.
 
 Admin-only access. Requires a reachable engine before the dashboard is useful â€” see INSTALL.md.]]></description>
-<version>2.3.2</version>
-<licence>agpl</licence>
+<version>2.3.3</version>
+<licence>AGPL-3.0-or-later</licence>
 <author mail="dan@19labs.com">19labs</author>
 <namespace>NcWireguard</namespace>
 <documentation>
@@ -59,7 +59,7 @@ Admin-only access. Requires a reachable engine before the dashboard is useful â€
 			<name>NC WireGuard</name>
 			<route>nc_wireguard.page.index</route>
 			<icon>app.svg</icon>
-			<order>74</order>
+			<order>82</order>
 		</navigation>
 	</navigations>
 </info>

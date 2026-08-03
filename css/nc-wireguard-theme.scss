@@ -1,7 +1,7 @@
 .card {
-	background: var(--color-main-background, #262626);
+	background: var(--color-main-background);
 	border-radius: 0.5rem;
-	border: 1px solid var(--color-border, #404040);
+	border: 1px solid var(--color-border);
 }
 
 .p-4 { padding: 1rem; }
@@ -9,7 +9,7 @@
 
 .stat-label {
 	font-size: 0.75rem;
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
@@ -21,16 +21,16 @@
 	margin-top: 0.25rem;
 }
 
-.text-green { color: #86efac; }
-.text-sky { color: #38bdf8; }
-.text-amber { color: #fbbf24; }
+.text-green { color: var(--color-success); }
+.text-sky { color: var(--color-primary); }
+.text-amber { color: var(--color-warning); }
 .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
 .mono-xs { font-family: ui-monospace, monospace; font-size: 0.65rem; }
-.muted { color: var(--color-text-maxcontrast, #a3a3a3); font-size: 0.75rem; }
+.muted { color: var(--color-text-maxcontrast); font-size: 0.75rem; }
 
 .badge-on {
-	background: #166534;
-	color: #86efac;
+	background: color-mix(in srgb, var(--color-success) 25%, transparent);
+	color: var(--color-success-text, var(--color-success));
 	padding: 0.125rem 0.5rem;
 	border-radius: 0.25rem;
 	font-size: 0.75rem;
@@ -38,8 +38,8 @@
 }
 
 .badge-off {
-	background: #7f1d1d;
-	color: #fca5a5;
+	background: color-mix(in srgb, var(--color-error) 25%, transparent);
+	color: var(--color-error-text, var(--color-error));
 	padding: 0.125rem 0.5rem;
 	border-radius: 0.25rem;
 	font-size: 0.75rem;
@@ -47,8 +47,8 @@
 }
 
 .badge-muted {
-	background: var(--color-background-dark, #404040);
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	background: var(--color-background-dark);
+	color: var(--color-text-maxcontrast);
 	padding: 0.125rem 0.5rem;
 	border-radius: 0.25rem;
 	font-size: 0.65rem;
@@ -56,8 +56,8 @@
 }
 
 .badge-warn {
-	background: #78350f;
-	color: #fcd34d;
+	background: color-mix(in srgb, var(--color-warning) 25%, transparent);
+	color: var(--color-warning-text, var(--color-warning));
 	padding: 0.125rem 0.5rem;
 	border-radius: 0.25rem;
 	font-size: 0.65rem;
@@ -81,14 +81,14 @@
 	align-items: center;
 	gap: 0.75rem 1.5rem;
 	margin-bottom: 1rem;
-	border-bottom: 1px solid var(--color-border, #404040);
+	border-bottom: 1px solid var(--color-border);
 }
 
 .nc-wg-tab-btn {
 	background: none;
 	border: none;
 	border-bottom: 2px solid transparent;
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 	font-size: 0.875rem;
 	font-weight: 500;
 	padding: 0 0 0.5rem;
@@ -97,12 +97,12 @@
 }
 
 .nc-wg-tab-btn.active {
-	border-bottom-color: #dc2626;
-	color: var(--color-main-text, #fff);
+	border-bottom-color: var(--nc-app-accent, var(--color-primary-element));
+	color: var(--color-main-text);
 }
 
 .nc-wg-tab-btn:hover:not(.active) {
-	color: var(--color-main-text, #d4d4d4);
+	color: var(--color-main-text);
 }
 
 .nc-wg-tab-badge {
@@ -121,12 +121,12 @@
 
 .nc-wg-tab-more__label {
 	font-size: 0.75rem;
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 }
 
 .nc-wg-tab-more__select {
-	background: var(--color-main-background, #262626);
-	border: 1px solid var(--color-border, #525252);
+	background: var(--color-main-background);
+	border: 1px solid var(--color-border);
 	border-radius: 0.25rem;
 	padding: 0.35rem 0.5rem;
 	color: inherit;
@@ -176,13 +176,13 @@
 .nc-wg-host-strip__label {
 	font-size: 0.65rem;
 	text-transform: uppercase;
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 	margin-bottom: 0.25rem;
 }
 
 .nc-wg-host-strip__bar-wrap {
 	height: 6px;
-	background: var(--color-background-dark, #333);
+	background: var(--color-background-dark);
 	border-radius: 3px;
 	overflow: hidden;
 }
@@ -196,7 +196,7 @@
 .nc-wg-host-strip__value {
 	font-size: 0.75rem;
 	margin-top: 0.2rem;
-	color: var(--color-main-text, #e5e5e5);
+	color: var(--color-main-text);
 }
 
 .nc-wg-overview-tools {
@@ -208,8 +208,8 @@
 	max-width: 20rem;
 	padding: 0.5rem 0.75rem;
 	border-radius: 0.25rem;
-	border: 1px solid var(--color-border, #525252);
-	background: var(--color-main-background, #262626);
+	border: 1px solid var(--color-border);
+	background: var(--color-main-background);
 	color: inherit;
 	min-height: 44px;
 }
@@ -236,11 +236,11 @@
 .nc-wg-table td {
 	padding: 0.75rem;
 	text-align: left;
-	border-bottom: 1px solid var(--color-border, #404040);
+	border-bottom: 1px solid var(--color-border);
 }
 
 .nc-wg-table th {
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 	font-size: 0.75rem;
 	text-transform: uppercase;
 }
@@ -251,7 +251,7 @@
 }
 
 .nc-wg-sortable:hover {
-	color: var(--color-main-text, #e5e5e5);
+	color: var(--color-main-text);
 }
 
 .nc-wg-peer-row {
@@ -259,7 +259,7 @@
 }
 
 .nc-wg-peer-row:hover {
-	background: var(--color-background-hover, rgba(255, 255, 255, 0.04));
+	background: var(--color-background-hover);
 }
 
 .nc-wg-peer--disabled {
@@ -267,7 +267,7 @@
 }
 
 .nc-wg-peer-expand td {
-	background: var(--color-background-dark, #1a1a1a);
+	background: var(--color-background-dark);
 	padding-top: 0.5rem;
 	padding-bottom: 0.75rem;
 }
@@ -315,7 +315,7 @@
 .nc-wg-peer-card__detail {
 	margin-top: 0.75rem;
 	padding-top: 0.75rem;
-	border-top: 1px solid var(--color-border, #404040);
+	border-top: 1px solid var(--color-border);
 	font-size: 0.8rem;
 	display: flex;
 	flex-direction: column;
@@ -332,8 +332,8 @@
 }
 
 .nc-wg-toolbar select {
-	background: var(--color-main-background, #262626);
-	border: 1px solid var(--color-border, #525252);
+	background: var(--color-main-background);
+	border: 1px solid var(--color-border);
 	border-radius: 0.25rem;
 	padding: 0.25rem 0.5rem;
 	color: inherit;
@@ -341,10 +341,10 @@
 }
 
 .nc-wg-btn {
-	background: var(--color-background-dark, #404040);
+	background: var(--color-background-dark);
 	border: none;
 	border-radius: 0.25rem;
-	color: var(--color-main-text, #fff);
+	color: var(--color-main-text);
 	padding: 0.5rem 0.75rem;
 	cursor: pointer;
 	min-height: 44px;
@@ -352,11 +352,12 @@
 }
 
 .nc-wg-btn--primary {
-	background: #991b1b;
+	background: var(--color-primary-element);
+	color: var(--color-primary-element-text, var(--color-main-text));
 }
 
 .nc-wg-btn--primary:hover {
-	background: #b91c1c;
+	background: var(--color-primary-element-hover);
 }
 
 .nc-wg-btn--sm {
@@ -380,7 +381,7 @@
 	font-size: 0.875rem;
 	font-weight: 600;
 	margin: 0 0 0.5rem;
-	color: var(--color-main-text, #e5e5e5);
+	color: var(--color-main-text);
 }
 
 .nc-wg-chart-wrap {
@@ -417,7 +418,7 @@
 }
 
 .leaflet-container {
-	background: var(--color-background-dark, #1a1a1a);
+	background: var(--color-background-dark);
 }
 
 .nc-wg-truncate {
@@ -427,31 +428,19 @@
 	white-space: nowrap;
 }
 
-.nc-wg-error-banner {
-	background: #7f1d1d;
-	border: 1px solid #dc2626;
-	border-radius: 0.5rem;
-	padding: 0.75rem 1rem;
-	margin-bottom: 1rem;
-	display: flex;
-	gap: 0.5rem;
-	align-items: center;
-	flex-wrap: wrap;
-}
-
 .nc-wg-loading {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
 	padding: 1rem;
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 }
 
 .nc-wg-loading__spinner {
 	width: 1rem;
 	height: 1rem;
-	border: 2px solid var(--color-border, #525252);
-	border-top-color: #dc2626;
+	border: 2px solid var(--color-border);
+	border-top-color: var(--nc-app-accent, var(--color-primary-element));
 	border-radius: 50%;
 	animation: nc-wg-spin 0.8s linear infinite;
 }
@@ -461,7 +450,7 @@
 }
 
 .nc-wg-hint {
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 	font-size: 0.875rem;
 	margin-bottom: 1rem;
 }
@@ -472,7 +461,7 @@
 
 .nc-wg-uptime {
 	font-size: 0.75rem;
-	color: var(--color-text-maxcontrast, #737373);
+	color: var(--color-text-maxcontrast);
 	margin-top: 0.75rem;
 }
 
@@ -480,7 +469,7 @@
 .nc-wg-empty-block {
 	padding: 2rem;
 	text-align: center;
-	color: var(--color-text-maxcontrast, #737373);
+	color: var(--color-text-maxcontrast);
 }
 
 .nc-wg-disabled,
@@ -532,7 +521,7 @@
 }
 
 .nc-wg-config-pre {
-	background: var(--color-background-dark, #1a1a1a);
+	background: var(--color-background-dark);
 	padding: 1rem;
 	border-radius: 0.25rem;
 	overflow: auto;
@@ -549,8 +538,8 @@
 	bottom: 1rem;
 	left: 50%;
 	transform: translateX(-50%);
-	background: #166534;
-	color: #86efac;
+	background: color-mix(in srgb, var(--color-success) 25%, transparent);
+	color: var(--color-success-text, var(--color-success));
 	padding: 0.5rem 1rem;
 	border-radius: 0.25rem;
 	font-size: 0.875rem;
@@ -569,23 +558,23 @@
 	font-size: 0.7rem;
 	padding: 0.2rem 0.5rem;
 	border-radius: 999px;
-	background: var(--color-background-dark, #333);
-	color: var(--color-main-text, #e5e5e5);
+	background: var(--color-background-dark);
+	color: var(--color-main-text);
 }
 
 .nc-wg-banner-chip--ok {
-	background: #166534;
-	color: #86efac;
+	background: color-mix(in srgb, var(--color-success) 25%, transparent);
+	color: var(--color-success-text, var(--color-success));
 }
 
 .nc-wg-banner-chip--err {
-	background: #7f1d1d;
-	color: #fca5a5;
+	background: color-mix(in srgb, var(--color-error) 25%, transparent);
+	color: var(--color-error-text, var(--color-error));
 }
 
 .nc-wg-banner-chip--muted {
 	background: transparent;
-	color: var(--color-text-maxcontrast, #a3a3a3);
+	color: var(--color-text-maxcontrast);
 }
 
 .nc-wireguard-admin-panel {
@@ -617,26 +606,26 @@
 }
 
 .nc-wg-test-result {
-	background: var(--color-background-dark, #1a1a1a);
+	background: var(--color-background-dark);
 	padding: 0.75rem;
 	font-size: 0.75rem;
 	overflow: auto;
 }
 
-.ok { color: #86efac; }
-.err { color: #fca5a5; }
+.ok { color: var(--color-success); }
+.err { color: var(--color-error); }
 
 .nc-wg-admin-link {
 	font-size: 0.75rem;
-	color: #38bdf8;
+	color: var(--color-primary);
 	text-decoration: none;
 }
 
 .nc-wg-admin-link:hover { text-decoration: underline; }
 
 .nc-wg-app-shell--nc_wireguard:not(.nc-wg-themed) {
-	background: var(--color-main-background, #1a1a1a);
-	color: var(--color-main-text, #e5e5e5);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
 	min-height: 100vh;
 	padding: 1rem;
 }

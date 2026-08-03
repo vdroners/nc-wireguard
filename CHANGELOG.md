@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.3.3] - 2026-08-03
+
+### Fixed
+- App icon redrawn as single-ink `currentColor` shield for Nextcloud nav/Settings tinting
+- Replaced dark-only status/accent hexes with Nextcloud CSS tokens for light-theme legibility
+- Rebuilt `ErrorBanner` on `NcNoteCard` for continuity with other NC apps
+- Licence string normalized to `AGPL-3.0-or-later`; nav order set to 82
+
+
 ## [2.3.2] - 2026-08-03
 
 ### Fixed
