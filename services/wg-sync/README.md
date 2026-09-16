@@ -56,6 +56,13 @@ docker compose -f docker-compose.lab.yml down          # keeps the config volume
 docker compose -f docker-compose.lab.yml down -v       # forgets the lab tunnel
 ```
 
+The compose file pins `name: nc-wireguard`, so those commands act on this app's
+project no matter which directory you run them from. That is deliberately a
+different project from `wireguard`, which holds production wg-easy: a shared
+project would mean a `down` here — or a stray `--remove-orphans` — could reach
+the live tunnel. The config volume keeps its original `wg-sync_` prefix so the
+project rename did not orphan `wg-lab0.conf`.
+
 ## API
 
 Every route needs `Authorization: Bearer $WG_SYNC_TOKEN`. `/health` can be

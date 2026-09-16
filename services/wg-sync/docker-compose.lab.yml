@@ -15,6 +15,15 @@
 #
 #   docker compose -f services/wg-sync/docker-compose.lab.yml up -d --build
 #
+# Project name is pinned so it does not fall back to the directory basename
+# ("wg-sync"), which said nothing about which app owns the stack. It is
+# deliberately NOT the "wireguard" project that holds production wg-easy: one
+# shared project would put `docker compose down` and `--remove-orphans` within
+# reach of the live tunnel, which is the isolation this lab exists to keep. At
+# cutover the production stack is written next to the wg-easy compose it
+# replaces (docs/ops/ENGINE_CUTOVER.md), joining that project instead.
+name: nc-wireguard
+
 services:
   wg-sync-lab:
     build:
@@ -62,6 +71,12 @@ services:
       # http://wg_sync_lab:51821; the host port is for curl during a smoke.
       - "127.0.0.1:51831:51821/tcp"
     restart: unless-stopped
+    # Observed 28MiB. Healthcheck already comes from the image's HEALTHCHECK.
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          pids: 128
     logging:
       driver: json-file
       options:
@@ -74,6 +89,11 @@ services:
 
 volumes:
   wg_sync_lab_config:
+    # Pinned to the pre-rename prefix. Compose prefixes volume names with the
+    # project, so renaming the project would have created an empty
+    # nc-wireguard_wg_sync_lab_config and left wg-lab0.conf -- the lab
+    # interface's private key and its peers -- behind in the old volume.
+    name: wg-sync_wg_sync_lab_config
 
 networks:
   wg-sync-lab:
