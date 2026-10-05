@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.4] - 2026-10-05
+
+### Fixed
+- wg-easy v15 login uses `POST /api/auth/password` (`/api/session` returns
+  404 on v15), so peer listing and sync work again. This hotfix had been
+  running live but was never committed.
+- `curl_close()` (a no-op deprecated in PHP 8.5) replaced with `unset()`.
+
+### Changed
+- Supports Nextcloud 35 (`max-version="35"`); verified on 35.0.1.
+
 ## [2.3.3] - 2026-08-03
 
 ### Fixed

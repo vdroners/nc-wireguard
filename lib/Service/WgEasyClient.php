@@ -11,11 +11,18 @@ use RuntimeException;
  * wg-easy session client for metrics poller + peer controller (v2.1).
  *
  * Write contract (wg-easy v15):
+ * - login:  POST /api/auth/password {username, password, remember}
  * - create: POST /api {name, expiresAt?}
  * - update: POST /api/client/{id} full ClientUpdateSchema
  * - delete: DELETE /api/client/{id}
  * - enable/disable: POST /api/client/{id}/enable|disable
  * - OTL: POST /api/client/{id}/generateOneTimeLink then read client.oneTimeLink
+ *
+ * Login endpoint note: v14 authenticated with POST /api/session. v15 kept
+ * /api/session as GET (read session) and DELETE (logout) only, and moved the
+ * credential exchange to POST /api/auth/password. Posting to the old path
+ * returns 404, which surfaced downstream as a misleading "wg-easy unreachable"
+ * every poll cycle. The request body is unchanged between versions.
  */
 class WgEasyClient
 {
@@ -36,7 +43,7 @@ class WgEasyClient
 	public function login(): array
 	{
 		$url = rtrim($this->settings->getWgEasyApiUrl(), '/');
-		$result = $this->request('POST', $url . '/api/session', [
+		$result = $this->request('POST', $url . '/api/auth/password', [
 			'username' => $this->settings->getWgEasyUsername(),
 			'password' => $this->settings->getWgEasyPassword(),
 			'remember' => true,
@@ -547,7 +554,7 @@ class WgEasyClient
 		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 		$contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-		curl_close($ch);
+		unset($ch);
 
 		if ($response === false) {
 			return [

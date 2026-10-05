@@ -30,7 +30,9 @@ class WgEasyProbe
 			return ['ok' => false, 'http_code' => 0, 'error' => 'wg-easy credentials not configured', 'client_count' => null];
 		}
 
-		$session = $this->postJson($url . '/api/session', [
+		// wg-easy v15 moved the credential exchange here; /api/session survives
+		// only as GET (read) and DELETE (logout), so POSTing to it returns 404.
+		$session = $this->postJson($url . '/api/auth/password', [
 			'username' => $username,
 			'password' => $password,
 			'remember' => true,
@@ -107,7 +109,7 @@ class WgEasyProbe
 		$error = curl_error($ch);
 		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-		curl_close($ch);
+		unset($ch);
 
 		if ($response === false) {
 			return ['ok' => false, 'http_code' => $httpCode, 'error' => $error, 'cookies' => [], 'body' => false];
@@ -138,7 +140,7 @@ class WgEasyProbe
 		$body = curl_exec($ch);
 		$error = curl_error($ch);
 		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
+		unset($ch);
 
 		return [
 			'ok' => ($body !== false && $error === '' && $httpCode === 200),

@@ -91,7 +91,7 @@ class GeoIpService
 		$body = curl_exec($ch);
 		$error = curl_error($ch);
 		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
+		unset($ch);
 
 		if ($body === false || $error !== '' || $httpCode !== 200) {
 			$this->logger->warning('nc_wireguard: GeoIP lookup failed', [

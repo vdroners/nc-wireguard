@@ -101,7 +101,7 @@ class WgSyncClient
 		$response = curl_exec($ch);
 		$curlError = curl_error($ch);
 		$httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
+		unset($ch);
 
 		if ($response === false) {
 			$this->logger->warning('nc_wireguard wg-sync: {method} {path} failed: {err}', [
