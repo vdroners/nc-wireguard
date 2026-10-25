@@ -45,12 +45,14 @@ class MetricsHealthJob extends TimedJob
 			return;
 		}
 
-		if (!$heartbeat->getSuccess()) {
+		$pollError = (string) $heartbeat->getErrorMessage();
+		$hostMissing = $pollError === 'wg-easy host does not resolve';
+		if (!$heartbeat->getSuccess() && !$hostMissing) {
 			$this->logger->error('nc_wireguard metrics watchdog: last poll failed', [
 				'error' => $heartbeat->getErrorMessage(),
 			]);
 		}
-		if (!$heartbeat->getWgEasyOk()) {
+		if (!$heartbeat->getWgEasyOk() && !$hostMissing) {
 			$this->logger->warning('nc_wireguard metrics watchdog: wg-easy was unreachable on last poll');
 		}
 

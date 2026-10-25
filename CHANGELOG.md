@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.5] - 2026-10-25
+
+### Fixed
+- Metrics poll and health checks no longer call wg-easy when its API host does not resolve, and the watchdog does not log that as an error. A native engine also skips the wg-easy probe.
+
 ## [2.3.4] - 2026-10-05
 
 ### Fixed

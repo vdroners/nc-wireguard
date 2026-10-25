@@ -16,6 +16,7 @@ class NativeHealthService
 		private WgEasyClient $wgEasyClient,
 		private AppSettings $settings,
 		private HostProcCollector $hostProc,
+		private EngineResolver $engines,
 	) {
 	}
 
@@ -50,8 +51,14 @@ class NativeHealthService
 		}
 
 		if (!$wgEasyOk) {
-			$clients = $this->wgEasyClient->getClients();
-			$wgEasyOk = $clients !== null;
+			// Native mode does not use wg-easy. An unresolvable API host
+			// must not be probed: every poll would log getClients failed.
+			if ($this->engines->useNative() || !$this->wgEasyClient->apiHostResolves()) {
+				$wgEasyOk = $this->engines->useNative();
+			} else {
+				$clients = $this->wgEasyClient->getClients();
+				$wgEasyOk = $clients !== null;
+			}
 		}
 
 		$hostMetricsOk = $this->hostProc->isAvailable();

@@ -40,8 +40,29 @@ class WgEasyClient
 	/**
 	 * @return array{ok: bool, error?: string, code?: string}
 	 */
+	/**
+	 * False when the configured API hostname has no DNS answer.
+	 * An IP literal counts as reachable at this layer.
+	 */
+	public function apiHostResolves(): bool
+	{
+		$url = $this->settings->getWgEasyApiUrl();
+		$host = parse_url($url, PHP_URL_HOST);
+		if (!is_string($host) || $host === '') {
+			return false;
+		}
+		if (filter_var($host, FILTER_VALIDATE_IP)) {
+			return true;
+		}
+		$resolved = gethostbyname($host);
+		return $resolved !== $host;
+	}
+
 	public function login(): array
 	{
+		if (!$this->apiHostResolves()) {
+			return ['ok' => false, 'error' => 'wg-easy host does not resolve'];
+		}
 		$url = rtrim($this->settings->getWgEasyApiUrl(), '/');
 		$result = $this->request('POST', $url . '/api/auth/password', [
 			'username' => $this->settings->getWgEasyUsername(),
@@ -77,6 +98,10 @@ class WgEasyClient
 	 */
 	public function getClients(): ?array
 	{
+		if (!$this->apiHostResolves()) {
+			$this->logger->debug('nc_wireguard: wg-easy host does not resolve');
+			return null;
+		}
 		$result = $this->authedJson('GET', '/api/client');
 		if ($result['http_code'] !== 200 || !is_array($result['json'])) {
 			$this->logger->error('nc_wireguard: getClients failed', [

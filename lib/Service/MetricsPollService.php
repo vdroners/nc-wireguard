@@ -28,6 +28,8 @@ class MetricsPollService
 {
 	public function __construct(
 		private WireGuardEngineInterface $engine,
+		private WgEasyClient $wgEasy,
+		private EngineResolver $engines,
 		private ConnectionStateMachine $fsm,
 		private GeoIpService $geoIp,
 		private SystemMetricsCollector $systemMetrics,
@@ -47,6 +49,17 @@ class MetricsPollService
 	{
 		$now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
 		$nowDt = \DateTime::createFromImmutable($now);
+
+		if (!$this->engines->useNative() && !$this->wgEasy->apiHostResolves()) {
+			$this->heartbeatMapper->recordPoll($nowDt, false, false, 'wg-easy host does not resolve');
+			return [
+				'ok' => false,
+				'clients' => 0,
+				'bandwidth_rows' => 0,
+				'connection_events' => 0,
+				'error' => 'wg-easy host does not resolve',
+			];
+		}
 
 		$clients = $this->engine->listPeers();
 		if ($clients === null) {
