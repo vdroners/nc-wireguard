@@ -45,6 +45,25 @@ class AppSettings
 		'hide_engine_admin_link' => 'hide_wg_easy_admin_link',
 	];
 
+	/**
+	 * Stale / lab-era appconfig keys that may still exist on long-lived installs.
+	 *
+	 * - `dashboard_internal_url` — archived wg-dashboard sidecar URL. **Unused**:
+	 *   nothing in this app reads it. Safe to `occ config:app:delete` after review.
+	 * - `wg_sync_url` / `wg_sync_token` — still used by the optional native/wg-sync
+	 *   lab engine path (`getWgSyncUrl()` / `getWgSyncToken()`). Listed for
+	 *   operator visibility only; do not delete while engine=native.
+	 *
+	 * No repair step deletes these. Admin health returns **names only**, never values.
+	 *
+	 * @var list<string>
+	 */
+	public const LEGACY_APPCONFIG_KEYS = [
+		'dashboard_internal_url',
+		'wg_sync_url',
+		'wg_sync_token',
+	];
+
 	public function __construct(
 		private IConfig $config,
 		private SecretCrypto $secrets,
@@ -387,5 +406,28 @@ class AppSettings
 	public function setWatchdogEnabled(bool $enabled): void
 	{
 		$this->config->setAppValue(Application::APP_ID, 'watchdog_enabled', $enabled ? '1' : '0');
+	}
+
+	/**
+	 * Names of legacy appconfig keys that are set (non-empty). Never returns values.
+	 *
+	 * @return list<string>
+	 */
+	public function listPresentLegacyKeys(): array
+	{
+		$present = [];
+		foreach (self::LEGACY_APPCONFIG_KEYS as $key) {
+			if ($key === 'wg_sync_token') {
+				if ($this->isWgSyncTokenConfigured()) {
+					$present[] = $key;
+				}
+				continue;
+			}
+			$value = trim((string) $this->config->getAppValue(Application::APP_ID, $key, ''));
+			if ($value !== '') {
+				$present[] = $key;
+			}
+		}
+		return $present;
 	}
 }

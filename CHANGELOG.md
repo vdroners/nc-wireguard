@@ -1,5 +1,51 @@
 # Changelog
 
+## [2.3.7] - 2026-11-23
+
+### Added
+- Admin settings: VPN endpoint host field (wg-easy userconfig `host`) with
+  password confirmation. `GET`/`POST /api/settings/endpoint`. Port stays
+  read-only; only the hostname/IPv4 is writable.
+
+### Fixed
+- System tab / `getServerDefaults` now show the real client-config Endpoint
+  (`host:port` from `/api/admin/userconfig`), not the engine admin URL host.
+- Health handshake counts: `connected` is recent-FSM only; `never` is unknown
+  (null). Warning shows for peers without a recent handshake (`peers_not_connected`);
+  lifetime never-handshaked count stays unknown.
+- Stale heartbeat still shows last poll, last error, and handshake summary/warning
+  under Status unknown (only a failed health GET hides those details).
+- Unreadable VPN endpoint host shows "unknown — <reason>" in admin settings and
+  System tab (`endpointError` from `getServerDefaults` when userconfig fails).
+- Endpoint host validator rejects all-numeric dotted strings that are not valid
+  IPv4 (e.g. `999.1.1.1`, `1.2.3`).
+- Legacy key copy: "unused; safe to remove…" only for `dashboard_internal_url`;
+  `wg_sync_url` / `wg_sync_token` labelled as still used by the lab/native path.
+- Stale heartbeat (> max(60, pollInterval*2)) returns status `unknown` and does
+  not present `wg_easy_ok` as a current yes.
+
+## [2.3.6] - 2026-11-23
+
+### Fixed
+- Admin settings panel rendered blank: the Vue 2 runtime-only bundle cannot
+  compile string `template:` options. Panel moved to `src/views/AdminSettings.vue`
+  (vue-loader) and mounted with `render: h => h(AdminSettings)`.
+- Admin version hint now uses `__NC_WIREGUARD_VERSION__` instead of a stale
+  hardcoded `v2.3.1`.
+
+### Added
+- Read-only Metrics health card on the admin panel (last poll, `wg_easy_ok`,
+  last error, peer handshake counts) via `GET /api/settings/health` (admin-only;
+  counts/timestamps/legacy key **names** only — never secrets).
+- Admin UI rebuilt on `@nextcloud/vue` 8 settings components (`NcSettingsSection`,
+  `NcCheckboxRadioSwitch`, `NcTextField`, `NcPasswordField`, `NcButton`,
+  `NcNoteCard`).
+
+### Changed
+- Documented unused legacy appconfig key `dashboard_internal_url` (archived
+  wg-dashboard). Health card lists present legacy key names for operator review;
+  no repair step deletes live values.
+
 ## [2.3.5] - 2026-10-25
 
 ### Fixed

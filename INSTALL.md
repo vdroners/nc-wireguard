@@ -75,6 +75,19 @@ absolute path to a `dashboard.db`. There is no built-in host path default.
 - Engine credentials live in Nextcloud appconfig; saving settings requires
   recent password confirmation.
 
+## Legacy keys
+
+Long-lived installs may still have stale appconfig keys. The admin Metrics
+health card lists any that are **present by name only** (never values) with a
+note that unused keys are safe to remove with `occ config:app:delete` after
+review. This app does **not** auto-delete them.
+
+| Key | Status |
+|-----|--------|
+| `dashboard_internal_url` | **Unused** (archived wg-dashboard). Nothing reads it. |
+| `wg_sync_url` | Still used by the optional native/wg-sync lab engine path. |
+| `wg_sync_token` | Still used by the optional native/wg-sync lab engine path (secret). |
+
 ## Further reading
 
 - [README.md](README.md) — product overview

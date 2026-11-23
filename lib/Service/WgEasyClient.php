@@ -126,16 +126,20 @@ class WgEasyClient
 	}
 
 	/**
-	 * Read-only wg-easy server defaults for the System tab (v2.2).
+	 * Read-only wg-easy server defaults for the System tab (v2.2+).
 	 *
-	 * Probes GET /api/admin/general and /api/admin/interface. Soft-fails when
-	 * the shape differs so the System tab still loads.
+	 * Probes GET /api/admin/general, /api/admin/interface, and
+	 * /api/admin/userconfig. Soft-fails when the shape differs so the System
+	 * tab still loads. `host` / `endpoint` come from userconfig (the Endpoint
+	 * written into client configs), not from the engine admin URL.
 	 *
 	 * @return array{
 	 *   ok: bool,
 	 *   unavailable?: bool,
 	 *   message?: string,
 	 *   host?: string|null,
+	 *   endpoint?: string|null,
+	 *   adminUiHost?: string|null,
 	 *   port?: int|null,
 	 *   mtu?: int|null,
 	 *   ipv4Cidr?: string|null,
@@ -166,27 +170,54 @@ class WgEasyClient
 		$if = $iface['json'];
 		$gen = is_array($general['json']) ? $general['json'] : [];
 
-		$host = null;
+		$adminUiHost = null;
 		$adminUrl = $this->settings->getWgEasyAdminUrl();
 		if ($adminUrl !== '') {
 			$parts = parse_url($adminUrl);
-			$host = is_array($parts) && isset($parts['host']) ? (string) $parts['host'] : null;
+			$adminUiHost = is_array($parts) && isset($parts['host']) ? (string) $parts['host'] : null;
 		}
-		if ($host === null || $host === '') {
-			$host = '127.0.0.1 (engine UI unpublished — break-glass only)';
+		if ($adminUiHost === null || $adminUiHost === '') {
+			$adminUiHost = '127.0.0.1 (engine UI unpublished — break-glass only)';
+		}
+
+		$endpointHost = null;
+		$endpointPort = isset($if['port']) ? (int) $if['port'] : null;
+		$endpointError = null;
+		$userConfig = $this->getUserConfig();
+		if ($userConfig['ok'] && is_array($userConfig['config'] ?? null)) {
+			$uc = $userConfig['config'];
+			if (isset($uc['host']) && is_string($uc['host']) && $uc['host'] !== '') {
+				$endpointHost = $uc['host'];
+			}
+			if (isset($uc['port']) && is_numeric($uc['port'])) {
+				$endpointPort = (int) $uc['port'];
+			}
+		} else {
+			// Short, no secrets / no engine body.
+			$endpointError = 'userconfig could not be read';
+		}
+
+		$endpoint = null;
+		if ($endpointHost !== null) {
+			$endpoint = $endpointPort !== null
+				? $endpointHost . ':' . $endpointPort
+				: $endpointHost;
 		}
 
 		$notes = [
 			'wg-easy v15 stores DNS / AllowedIPs / keepalive per peer, not as global defaults.',
 			'NC Field preset: AllowedIPs 10.0.0.0/24,10.8.0.0/24 · keepalive 25 · IPv4-only.',
 			'Server write / restart / hooks / Amnezia stay deferred — loopback engine UI for those.',
+			'Endpoint (in client configs) is the userconfig host:port — change it from Admin settings.',
 		];
 
-		return [
+		$result = [
 			'ok' => true,
 			'unavailable' => false,
-			'host' => $host,
-			'port' => isset($if['port']) ? (int) $if['port'] : null,
+			'host' => $endpointHost,
+			'endpoint' => $endpoint,
+			'adminUiHost' => $adminUiHost,
+			'port' => $endpointPort,
 			'mtu' => isset($if['mtu']) ? (int) $if['mtu'] : null,
 			'ipv4Cidr' => isset($if['ipv4Cidr']) ? (string) $if['ipv4Cidr'] : null,
 			'ipv6Cidr' => isset($if['ipv6Cidr']) ? (string) $if['ipv6Cidr'] : null,
@@ -199,6 +230,60 @@ class WgEasyClient
 			'defaultAllowedIps' => null,
 			'defaultKeepalive' => null,
 			'notes' => $notes,
+		];
+		if ($endpointError !== null) {
+			$result['endpointError'] = $endpointError;
+		}
+		return $result;
+	}
+
+	/**
+	 * GET /api/admin/userconfig — full object used as Endpoint defaults for clients.
+	 *
+	 * @return array{ok: bool, config?: array<string, mixed>, error?: string}
+	 */
+	public function getUserConfig(): array
+	{
+		$result = $this->authedJson('GET', '/api/admin/userconfig');
+		if ($result['http_code'] !== 200 || !is_array($result['json'])) {
+			return [
+				'ok' => false,
+				'error' => $result['error'] !== '' ? $result['error'] : 'userconfig unavailable',
+			];
+		}
+		return ['ok' => true, 'config' => $result['json']];
+	}
+
+	/**
+	 * Change only the VPN endpoint host in wg-easy userconfig.
+	 *
+	 * GETs the full object, replaces `host`, POSTs the complete payload back
+	 * (engine UserConfigUpdateSchema requires every field). Never changes port
+	 * or Amnezia J/I fields. Does not echo engine response bodies (may contain secrets).
+	 *
+	 * @return array{ok: bool, error?: string, host?: string}
+	 */
+	public function updateEndpointHost(string $host): array
+	{
+		$current = $this->getUserConfig();
+		if (!$current['ok'] || !isset($current['config']) || !is_array($current['config'])) {
+			return [
+				'ok' => false,
+				'error' => $current['error'] ?? 'userconfig unavailable',
+			];
+		}
+
+		$payload = $current['config'];
+		$payload['host'] = $host;
+
+		$result = $this->authedJson('POST', '/api/admin/userconfig', $payload);
+		if ($result['http_code'] >= 200 && $result['http_code'] < 300) {
+			return ['ok' => true, 'host' => $host];
+		}
+
+		return [
+			'ok' => false,
+			'error' => $result['error'] !== '' ? $result['error'] : 'userconfig update failed',
 		];
 	}
 
@@ -507,7 +592,7 @@ class WgEasyClient
 	 * @param array<string, mixed>|null $jsonBody
 	 * @return array{http_code: int, error: string, json: mixed, code?: string}
 	 */
-	private function authedJson(string $method, string $path, ?array $jsonBody = null): array
+	protected function authedJson(string $method, string $path, ?array $jsonBody = null): array
 	{
 		$url = rtrim($this->settings->getWgEasyApiUrl(), '/') . $path;
 		$result = $this->request($method, $url, $jsonBody, true);

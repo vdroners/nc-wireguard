@@ -95,6 +95,24 @@ final class AppSettingsAliasTest extends TestCase
 		self::assertTrue($settings->isImportComplete());
 	}
 
+	public function testListPresentLegacyKeysReturnsNamesOnly(): void
+	{
+		$settings = $this->settings([
+			'dashboard_internal_url' => 'http://wg-dashboard:8080',
+			'wg_sync_url' => 'http://wg_sync_lab:51821',
+			'wg_sync_token' => 'lab-token-value',
+		]);
+		$names = $settings->listPresentLegacyKeys();
+		self::assertSame(
+			['dashboard_internal_url', 'wg_sync_url', 'wg_sync_token'],
+			$names
+		);
+		// Accessor returns names — callers must never echo stored values from this list.
+		self::assertNotContains('http://wg-dashboard:8080', $names);
+		self::assertNotContains('lab-token-value', $names);
+		self::assertSame([], $this->settings([])->listPresentLegacyKeys());
+	}
+
 	/**
 	 * Reading through the public accessor that owns each aliased name, so the
 	 * test covers the real call path rather than the private helper.
