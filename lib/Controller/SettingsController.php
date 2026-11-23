@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\NcWireguard\Controller;
 
 use OCA\NcWireguard\AppInfo\Application;
+use OCA\NcWireguard\Db\MetricsHeartbeatMapper;
+use OCA\NcWireguard\Db\PollStateMapper;
 use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\NativeHealthService;
 use OCA\NcWireguard\Service\WgEasyProbe;
@@ -26,6 +28,8 @@ class SettingsController extends Controller
 		private AppSettings $appSettings,
 		private NativeHealthService $nativeHealth,
 		private WgEasyProbe $wgEasyProbe,
+		private MetricsHeartbeatMapper $heartbeatMapper,
+		private PollStateMapper $pollStateMapper,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -110,6 +114,49 @@ class SettingsController extends Controller
 		}
 
 		return $this->getSettings();
+	}
+
+	/**
+	 * Admin health card: timestamps, ok flags, peer handshake counts, legacy key names.
+	 * Never returns secrets, endpoints, IPs, tokens, or peer keys.
+	 */
+	#[AdminRequired]
+	#[NoCSRFRequired]
+	public function getHealth(): JSONResponse
+	{
+		$heartbeat = $this->heartbeatMapper->findSingleton();
+		$legacyKeys = $this->appSettings->listPresentLegacyKeys();
+
+		if ($heartbeat === null) {
+			return new JSONResponse([
+				'status' => 'unknown',
+				'known' => false,
+				'status_reason' => 'no heartbeat row yet — poller has not succeeded',
+				'last_poll_at' => null,
+				'wg_easy_ok' => null,
+				'error_message' => null,
+				'peers_total' => null,
+				'peers_with_handshake' => null,
+				'peers_never_handshake' => null,
+				'legacy_keys_present' => $legacyKeys,
+			]);
+		}
+
+		$stats = $this->pollStateMapper->countHandshakeStats();
+		$lastPollAt = $heartbeat->getLastPollAt();
+
+		return new JSONResponse([
+			'status' => $heartbeat->getSuccess() ? 'ok' : 'degraded',
+			'known' => true,
+			'status_reason' => null,
+			'last_poll_at' => $lastPollAt !== null ? $lastPollAt->format('c') : null,
+			'wg_easy_ok' => $heartbeat->getWgEasyOk(),
+			'error_message' => $heartbeat->getErrorMessage(),
+			'peers_total' => $stats['total'],
+			'peers_with_handshake' => $stats['with_handshake'],
+			'peers_never_handshake' => $stats['never'],
+			'legacy_keys_present' => $legacyKeys,
+		]);
 	}
 
 	#[AdminRequired]

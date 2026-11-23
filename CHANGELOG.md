@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.3.6] - 2026-11-23
+
+### Fixed
+- Admin settings panel rendered blank: the Vue 2 runtime-only bundle cannot
+  compile string `template:` options. Panel moved to `src/views/AdminSettings.vue`
+  (vue-loader) and mounted with `render: h => h(AdminSettings)`.
+- Admin version hint now uses `__NC_WIREGUARD_VERSION__` instead of a stale
+  hardcoded `v2.3.1`.
+
+### Added
+- Read-only Metrics health card on the admin panel (last poll, `wg_easy_ok`,
+  last error, peer handshake counts) via `GET /api/settings/health` (admin-only;
+  counts/timestamps/legacy key **names** only — never secrets).
+- Admin UI rebuilt on `@nextcloud/vue` 8 settings components (`NcSettingsSection`,
+  `NcCheckboxRadioSwitch`, `NcTextField`, `NcPasswordField`, `NcButton`,
+  `NcNoteCard`).
+
+### Changed
+- Documented unused legacy appconfig key `dashboard_internal_url` (archived
+  wg-dashboard). Health card lists present legacy key names for operator review;
+  no repair step deletes live values.
+
 ## [2.3.5] - 2026-10-25
 
 ### Fixed

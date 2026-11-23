@@ -1,6 +1,6 @@
 {
   "name": "nc_wireguard",
-  "version": "2.3.5",
+  "version": "2.3.6",
   "private": true,
   "description": "WireGuard peer controller and metrics for Nextcloud",
   "license": "AGPL-3.0-or-later",
@@ -15,7 +15,8 @@
   "scripts": {
     "build": "sass css/style.scss css/style.css --no-source-map && webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test:js": "vitest run"
   },
   "dependencies": {
     "@nextcloud/axios": "^2.5.0",

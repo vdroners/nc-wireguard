@@ -8,6 +8,7 @@ return [
 		['name' => 'api#status', 'url' => '/api/status', 'verb' => 'GET'],
 		['name' => 'settings#getSettings', 'url' => '/api/settings', 'verb' => 'GET'],
 		['name' => 'settings#saveSettings', 'url' => '/api/settings', 'verb' => 'PUT'],
+		['name' => 'settings#getHealth', 'url' => '/api/settings/health', 'verb' => 'GET'],
 		['name' => 'settings#testConnection', 'url' => '/api/settings/test', 'verb' => 'POST'],
 		['name' => 'settings#testWgEasy', 'url' => '/api/settings/test-wg-easy', 'verb' => 'POST'],
 		['name' => 'dashboard#proxy', 'url' => '/api/dashboard/{path}', 'verb' => 'GET', 'requirements' => ['path' => '.+']],

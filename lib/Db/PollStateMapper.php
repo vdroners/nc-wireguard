@@ -48,4 +48,37 @@ class PollStateMapper extends QBMapper
 			));
 		$qb->executeStatement();
 	}
+
+	/**
+	 * Admin health counts only — no endpoints, keys, or peer identities.
+	 *
+	 * `connected` mirrors a recent handshake (FSM timeout). Peers that are not
+	 * connected are reported as "never" for the admin summary because poll_state
+	 * does not retain historical handshake timestamps.
+	 *
+	 * @return array{total: int, with_handshake: int, never: int}
+	 */
+	public function countHandshakeStats(): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('connected')
+			->from($this->getTableName());
+		$result = $qb->executeQuery();
+
+		$total = 0;
+		$withHandshake = 0;
+		while ($row = $result->fetchAssociative()) {
+			$total++;
+			$connected = $row['connected'] ?? false;
+			if ($connected === true || $connected === 1 || $connected === '1') {
+				$withHandshake++;
+			}
+		}
+
+		return [
+			'total' => $total,
+			'with_handshake' => $withHandshake,
+			'never' => $total - $withHandshake,
+		];
+	}
 }
