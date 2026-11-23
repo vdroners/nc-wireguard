@@ -76,14 +76,26 @@ const healthPayload = {
 	wg_easy_ok: true,
 	error_message: null,
 	peers_total: 4,
-	peers_with_handshake: 2,
-	peers_never_handshake: 2,
-	legacy_keys_present: ['dashboard_internal_url', 'wg_sync_url'],
+	peers_connected: 2,
+	peers_not_connected: 2,
+	peers_never_handshake: null,
+	legacy_keys_present: ['dashboard_internal_url', 'wg_sync_url', 'wg_sync_token'],
 	status: 'ok',
 	status_reason: null,
 }
 
-function mockApis({ settings = settingsPayload, health = healthPayload, settingsError = null } = {}) {
+const endpointPayload = {
+	host: 'cloud-vdroners.ddns.net',
+	port: 51820,
+}
+
+function mockApis({
+	settings = settingsPayload,
+	health = healthPayload,
+	endpoint = endpointPayload,
+	settingsError = null,
+	endpointPost = null,
+} = {}) {
 	axiosMock.mockImplementation((opts) => {
 		const url = typeof opts === 'string' ? opts : opts.url
 		const method = (opts.method || 'GET').toUpperCase()
@@ -95,6 +107,15 @@ function mockApis({ settings = settingsPayload, health = healthPayload, settings
 		}
 		if (method === 'GET' && url.includes('/api/settings/health')) {
 			return Promise.resolve({ data: health })
+		}
+		if (method === 'GET' && url.includes('/api/settings/endpoint')) {
+			return Promise.resolve({ data: endpoint })
+		}
+		if (method === 'POST' && url.includes('/api/settings/endpoint')) {
+			if (typeof endpointPost === 'function') {
+				return endpointPost(opts)
+			}
+			return Promise.resolve({ data: { ok: true, host: opts.data.host, port: endpoint.port } })
 		}
 		if (method === 'PUT' && url.endsWith('/api/settings')) {
 			return Promise.resolve({ data: { ...settings, ...opts.data } })
@@ -232,18 +253,86 @@ describe('AdminSettings.vue', () => {
 		wrapper.destroy()
 	})
 
-	it('Health card shows no-handshake warning and legacy key NAMES only', async () => {
+	it('Health card shows connected vs not-connected; never unknown; no idle warning', async () => {
 		mockApis()
 		const wrapper = await mountAdmin()
-		expect(wrapper.text()).toMatch(/2 of 4 peers have a handshake \(never: 2\)/)
-		expect(wrapper.find('.stub-note[data-type="warning"]').exists()).toBe(true)
-		expect(wrapper.text()).toContain('dashboard_internal_url')
-		expect(wrapper.text()).toContain('wg_sync_url')
-		expect(wrapper.text()).toMatch(/unused; safe to remove with occ config:app:delete after review/)
-		// Legacy block lists names only — never values / ciphertext.
+		expect(wrapper.text()).toMatch(/2 of 4 peers connected recently/)
+		expect(wrapper.text()).toMatch(/not connected: 2/)
+		expect(wrapper.text()).toMatch(/never: unknown/)
+		expect(wrapper.find('.stub-note[data-type="warning"]').exists()).toBe(false)
 		const legacy = wrapper.find('[data-testid="legacy-keys"]')
 		expect(legacy.exists()).toBe(true)
+		expect(legacy.text()).toContain('dashboard_internal_url')
+		expect(legacy.text()).toContain('wg_sync_url')
+		expect(legacy.text()).toContain('wg_sync_token')
+		expect(legacy.text()).toMatch(/unused; safe to remove with occ config:app:delete after review/)
+		expect(legacy.text()).toMatch(/still used by the optional lab\/native wg-sync path/)
 		expect(legacy.text()).not.toMatch(/enc:v1:|http:\/\/|token-value|secret-value/i)
+		wrapper.destroy()
+	})
+
+	it('shows VPN endpoint host from API; port read-only', async () => {
+		mockApis()
+		const wrapper = await mountAdmin()
+		expect(wrapper.text()).toContain('VPN endpoint')
+		const hostInput = wrapper.find('[data-testid="endpoint-host"] input')
+		expect(hostInput.exists()).toBe(true)
+		expect(hostInput.element.value).toBe('cloud-vdroners.ddns.net')
+		expect(wrapper.text()).toMatch(/51820/)
+		expect(wrapper.text()).toMatch(/Changing this changes the Endpoint in every newly downloaded client config/)
+		wrapper.destroy()
+	})
+
+	it('invalid hostnames block Save with a message and send no POST', async () => {
+		mockApis()
+		const wrapper = await mountAdmin()
+		axiosMock.mockClear()
+		const hostInput = wrapper.find('[data-testid="endpoint-host"] input')
+		for (const bad of ['https://x', 'a b', 'host:51820', '']) {
+			await hostInput.setValue(bad)
+			await wrapper.find('[data-testid="endpoint-save"]').trigger('click')
+			await flush()
+			expect(wrapper.text()).toMatch(/Invalid hostname|hostname|IPv4/i)
+			const posts = axiosMock.mock.calls.filter((c) => (c[0].method || '').toUpperCase() === 'POST')
+			expect(posts).toHaveLength(0)
+		}
+		wrapper.destroy()
+	})
+
+	it('valid host POSTs only {host}; success note only after 2xx; failure keeps old value', async () => {
+		let postCount = 0
+		mockApis({
+			endpointPost: (opts) => {
+				postCount++
+				if (postCount === 1) {
+					return Promise.reject({ response: { data: { error: 'engine refused' } }, message: 'engine refused' })
+				}
+				return Promise.resolve({ data: { ok: true, host: opts.data.host, port: 51820 } })
+			},
+		})
+		const wrapper = await mountAdmin()
+		const hostInput = wrapper.find('[data-testid="endpoint-host"] input')
+		expect(hostInput.element.value).toBe('cloud-vdroners.ddns.net')
+
+		await hostInput.setValue('vpn.new.example')
+		axiosMock.mockClear()
+		await wrapper.find('[data-testid="endpoint-save"]').trigger('click')
+		await flush()
+		const post1 = axiosMock.mock.calls.find((c) => (c[0].method || '').toUpperCase() === 'POST')
+		expect(post1).toBeTruthy()
+		expect(Object.keys(post1[0].data)).toEqual(['host'])
+		expect(post1[0].data.host).toBe('vpn.new.example')
+		expect(wrapper.text()).toContain('engine refused')
+		expect(wrapper.find('.stub-note[data-type="success"]').exists()).toBe(false)
+		expect(wrapper.find('[data-testid="endpoint-host"] input').element.value).toBe('cloud-vdroners.ddns.net')
+
+		await hostInput.setValue('vpn.new.example')
+		axiosMock.mockClear()
+		await wrapper.find('[data-testid="endpoint-save"]').trigger('click')
+		await flush()
+		expect(wrapper.find('.stub-note[data-type="success"]').exists()).toBe(true)
+		expect(wrapper.text()).toMatch(/Endpoint saved|endpoint host saved/i)
+		expect(wrapper.find('[data-testid="endpoint-host"] input').element.value).toBe('vpn.new.example')
 		wrapper.destroy()
 	})
 })

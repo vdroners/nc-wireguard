@@ -11,10 +11,12 @@ use OCA\NcWireguard\Db\MetricsHeartbeatMapper;
 use OCA\NcWireguard\Db\PollStateMapper;
 use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\NativeHealthService;
+use OCA\NcWireguard\Service\WgEasyClient;
 use OCA\NcWireguard\Service\WgEasyProbe;
 use OCP\IConfig;
 use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 final class SettingsControllerHealthTest extends TestCase
 {
@@ -22,6 +24,7 @@ final class SettingsControllerHealthTest extends TestCase
 		?MetricsHeartbeat $heartbeat,
 		array $handshakeStats,
 		array $legacyKeys,
+		int $pollInterval = 30,
 	): SettingsController {
 		$heartbeatMapper = $this->createMock(MetricsHeartbeatMapper::class);
 		$heartbeatMapper->method('findSingleton')->willReturn($heartbeat);
@@ -31,6 +34,7 @@ final class SettingsControllerHealthTest extends TestCase
 
 		$appSettings = $this->createMock(AppSettings::class);
 		$appSettings->method('listPresentLegacyKeys')->willReturn($legacyKeys);
+		$appSettings->method('getPollIntervalSeconds')->willReturn($pollInterval);
 
 		return new SettingsController(
 			$this->createMock(IRequest::class),
@@ -40,12 +44,18 @@ final class SettingsControllerHealthTest extends TestCase
 			$this->createMock(WgEasyProbe::class),
 			$heartbeatMapper,
 			$pollStateMapper,
+			$this->createMock(WgEasyClient::class),
+			$this->createMock(LoggerInterface::class),
 		);
 	}
 
 	public function testUnknownWhenNoHeartbeat(): void
 	{
-		$controller = $this->makeController(null, ['total' => 0, 'with_handshake' => 0, 'never' => 0], ['dashboard_internal_url']);
+		$controller = $this->makeController(
+			null,
+			['total' => 0, 'connected' => 0, 'not_connected' => 0, 'never' => null],
+			['dashboard_internal_url'],
+		);
 		$resp = $controller->getHealth();
 		$data = $resp->getData();
 
@@ -54,6 +64,7 @@ final class SettingsControllerHealthTest extends TestCase
 		self::assertFalse($data['known']);
 		self::assertNull($data['wg_easy_ok']);
 		self::assertNull($data['peers_total']);
+		self::assertNull($data['peers_never_handshake']);
 		self::assertSame(['dashboard_internal_url'], $data['legacy_keys_present']);
 		self::assertArrayNotHasKey('wg_easy_password', $data);
 		self::assertArrayNotHasKey('wg_sync_token', $data);
@@ -63,14 +74,14 @@ final class SettingsControllerHealthTest extends TestCase
 	public function testReturnsCountsAndNoSecretsWhenHeartbeatPresent(): void
 	{
 		$heartbeat = new MetricsHeartbeat();
-		$heartbeat->setLastPollAt(new DateTime('2026-11-23T20:00:00+00:00'));
+		$heartbeat->setLastPollAt(new DateTime('now'));
 		$heartbeat->setSuccess(true);
 		$heartbeat->setWgEasyOk(true);
 		$heartbeat->setErrorMessage(null);
 
 		$controller = $this->makeController(
 			$heartbeat,
-			['total' => 4, 'with_handshake' => 2, 'never' => 2],
+			['total' => 4, 'connected' => 2, 'not_connected' => 2, 'never' => null],
 			['dashboard_internal_url', 'wg_sync_url'],
 		);
 		$resp = $controller->getHealth();
@@ -81,8 +92,9 @@ final class SettingsControllerHealthTest extends TestCase
 		self::assertTrue($data['known']);
 		self::assertTrue($data['wg_easy_ok']);
 		self::assertSame(4, $data['peers_total']);
-		self::assertSame(2, $data['peers_with_handshake']);
-		self::assertSame(2, $data['peers_never_handshake']);
+		self::assertSame(2, $data['peers_connected']);
+		self::assertSame(2, $data['peers_not_connected']);
+		self::assertNull($data['peers_never_handshake']);
 		self::assertSame(['dashboard_internal_url', 'wg_sync_url'], $data['legacy_keys_present']);
 
 		$encoded = json_encode($data, JSON_THROW_ON_ERROR);
@@ -90,5 +102,28 @@ final class SettingsControllerHealthTest extends TestCase
 		self::assertStringNotContainsString('password', $encoded);
 		self::assertStringNotContainsString('token-value', $encoded);
 		self::assertDoesNotMatchRegularExpression('/\d+\.\d+\.\d+\.\d+/', $encoded);
+	}
+
+	public function testStaleHeartbeatIsUnknownAndDoesNotPresentWgEasyOk(): void
+	{
+		$heartbeat = new MetricsHeartbeat();
+		$heartbeat->setLastPollAt(new DateTime('-1 hour'));
+		$heartbeat->setSuccess(true);
+		$heartbeat->setWgEasyOk(true);
+		$heartbeat->setErrorMessage(null);
+
+		$controller = $this->makeController(
+			$heartbeat,
+			['total' => 1, 'connected' => 1, 'not_connected' => 0, 'never' => null],
+			[],
+			30,
+		);
+		$resp = $controller->getHealth();
+		$data = $resp->getData();
+
+		self::assertSame('unknown', $data['status']);
+		self::assertNull($data['wg_easy_ok']);
+		self::assertNotNull($data['status_reason']);
+		self::assertStringContainsString('older than', (string) $data['status_reason']);
 	}
 }

@@ -9,6 +9,7 @@ use OCA\NcWireguard\Db\MetricsHeartbeatMapper;
 use OCA\NcWireguard\Db\PollStateMapper;
 use OCA\NcWireguard\Service\AppSettings;
 use OCA\NcWireguard\Service\NativeHealthService;
+use OCA\NcWireguard\Service\WgEasyClient;
 use OCA\NcWireguard\Service\WgEasyProbe;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -19,6 +20,7 @@ use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
 use OCP\IRequest;
+use Psr\Log\LoggerInterface;
 
 class SettingsController extends Controller
 {
@@ -30,6 +32,8 @@ class SettingsController extends Controller
 		private WgEasyProbe $wgEasyProbe,
 		private MetricsHeartbeatMapper $heartbeatMapper,
 		private PollStateMapper $pollStateMapper,
+		private WgEasyClient $wgEasyClient,
+		private LoggerInterface $logger,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -136,7 +140,8 @@ class SettingsController extends Controller
 				'wg_easy_ok' => null,
 				'error_message' => null,
 				'peers_total' => null,
-				'peers_with_handshake' => null,
+				'peers_connected' => null,
+				'peers_not_connected' => null,
 				'peers_never_handshake' => null,
 				'legacy_keys_present' => $legacyKeys,
 			]);
@@ -144,6 +149,26 @@ class SettingsController extends Controller
 
 		$stats = $this->pollStateMapper->countHandshakeStats();
 		$lastPollAt = $heartbeat->getLastPollAt();
+		$pollInterval = $this->appSettings->getPollIntervalSeconds();
+		$staleThreshold = max(60, $pollInterval * 2);
+		$age = $lastPollAt !== null ? (time() - $lastPollAt->getTimestamp()) : PHP_INT_MAX;
+		$stale = $age > $staleThreshold;
+
+		if ($stale) {
+			return new JSONResponse([
+				'status' => 'unknown',
+				'known' => true,
+				'status_reason' => 'last poll older than ' . $staleThreshold . 's — treating as unknown',
+				'last_poll_at' => $lastPollAt !== null ? $lastPollAt->format('c') : null,
+				'wg_easy_ok' => null,
+				'error_message' => $heartbeat->getErrorMessage(),
+				'peers_total' => $stats['total'],
+				'peers_connected' => $stats['connected'],
+				'peers_not_connected' => $stats['not_connected'],
+				'peers_never_handshake' => $stats['never'],
+				'legacy_keys_present' => $legacyKeys,
+			]);
+		}
 
 		return new JSONResponse([
 			'status' => $heartbeat->getSuccess() ? 'ok' : 'degraded',
@@ -153,10 +178,117 @@ class SettingsController extends Controller
 			'wg_easy_ok' => $heartbeat->getWgEasyOk(),
 			'error_message' => $heartbeat->getErrorMessage(),
 			'peers_total' => $stats['total'],
-			'peers_with_handshake' => $stats['with_handshake'],
+			'peers_connected' => $stats['connected'],
+			'peers_not_connected' => $stats['not_connected'],
 			'peers_never_handshake' => $stats['never'],
 			'legacy_keys_present' => $legacyKeys,
 		]);
+	}
+
+	/**
+	 * Current VPN endpoint host/port from wg-easy userconfig (admin read).
+	 */
+	#[AdminRequired]
+	#[NoCSRFRequired]
+	public function getEndpoint(): JSONResponse
+	{
+		$result = $this->wgEasyClient->getUserConfig();
+		if (!$result['ok'] || !isset($result['config']) || !is_array($result['config'])) {
+			return new JSONResponse([
+				'ok' => false,
+				'error' => 'endpoint unavailable',
+				'host' => null,
+				'port' => null,
+			], Http::STATUS_BAD_GATEWAY);
+		}
+		$config = $result['config'];
+		$host = isset($config['host']) && is_string($config['host']) ? $config['host'] : null;
+		$port = isset($config['port']) && is_numeric($config['port']) ? (int) $config['port'] : null;
+		return new JSONResponse([
+			'ok' => true,
+			'host' => $host,
+			'port' => $port,
+		]);
+	}
+
+	/**
+	 * Update VPN endpoint host only (port unchanged). Password confirmation required.
+	 */
+	#[AdminRequired]
+	#[PasswordConfirmationRequired]
+	public function updateEndpoint(): JSONResponse
+	{
+		$data = $this->readJsonBody();
+		if (!is_array($data)) {
+			return new JSONResponse(['error' => 'Invalid JSON'], Http::STATUS_BAD_REQUEST);
+		}
+		$host = isset($data['host']) ? trim((string) $data['host']) : '';
+		if (!self::isValidEndpointHost($host)) {
+			return new JSONResponse([
+				'error' => 'Invalid hostname — use an RFC 1123 hostname or IPv4 (no scheme, port, or spaces)',
+			], Http::STATUS_BAD_REQUEST);
+		}
+
+		$before = $this->wgEasyClient->getUserConfig();
+		$oldHost = null;
+		if ($before['ok'] && isset($before['config']['host']) && is_string($before['config']['host'])) {
+			$oldHost = $before['config']['host'];
+		}
+
+		$result = $this->wgEasyClient->updateEndpointHost($host);
+		$this->logger->info('nc_wireguard endpoint host change', [
+			'old_host' => $oldHost,
+			'new_host' => $host,
+			'ok' => $result['ok'],
+		]);
+
+		if (!$result['ok']) {
+			return new JSONResponse([
+				'error' => $result['error'] ?? 'endpoint update failed',
+			], Http::STATUS_BAD_GATEWAY);
+		}
+
+		$port = null;
+		if ($before['ok'] && isset($before['config']['port']) && is_numeric($before['config']['port'])) {
+			$port = (int) $before['config']['port'];
+		}
+
+		return new JSONResponse([
+			'ok' => true,
+			'host' => $host,
+			'port' => $port,
+		]);
+	}
+
+	/**
+	 * RFC 1123 hostname or IPv4 — no scheme, port, path, or spaces.
+	 */
+	public static function isValidEndpointHost(string $host): bool
+	{
+		$host = trim($host);
+		if ($host === '' || strlen($host) > 253) {
+			return false;
+		}
+		if (preg_match('/[\s\/:#\?\\\\]/', $host) === 1) {
+			return false;
+		}
+		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+			return true;
+		}
+		// Single-label or dotted labels; each 1–63 chars, alnum or hyphen, no leading/trailing hyphen.
+		return preg_match(
+			'/^(?=.{1,253}$)([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$/',
+			$host
+		) === 1;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	protected function readJsonBody(): mixed
+	{
+		$body = file_get_contents('php://input');
+		return json_decode((string) $body, true);
 	}
 
 	#[AdminRequired]

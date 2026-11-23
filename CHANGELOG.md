@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.3.7] - 2026-11-23
+
+### Added
+- Admin settings: VPN endpoint host field (wg-easy userconfig `host`) with
+  password confirmation. `GET`/`POST /api/settings/endpoint`. Port stays
+  read-only; only the hostname/IPv4 is writable.
+
+### Fixed
+- System tab / `getServerDefaults` now show the real client-config Endpoint
+  (`host:port` from `/api/admin/userconfig`), not the engine admin URL host.
+- Health handshake counts: `connected` is recent-FSM only; `never` is unknown
+  (null). Idle peers no longer raise a "Peers without handshake" warning.
+- Legacy key copy: "unused; safe to remove…" only for `dashboard_internal_url`;
+  `wg_sync_url` / `wg_sync_token` labelled as still used by the lab/native path.
+- Stale heartbeat (> max(60, pollInterval*2)) returns status `unknown` and does
+  not present `wg_easy_ok` as a current yes.
+
 ## [2.3.6] - 2026-11-23
 
 ### Fixed

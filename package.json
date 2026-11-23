@@ -1,6 +1,6 @@
 {
   "name": "nc_wireguard",
-  "version": "2.3.6",
+  "version": "2.3.7",
   "private": true,
   "description": "WireGuard peer controller and metrics for Nextcloud",
   "license": "AGPL-3.0-or-later",

@@ -52,11 +52,11 @@ class PollStateMapper extends QBMapper
 	/**
 	 * Admin health counts only — no endpoints, keys, or peer identities.
 	 *
-	 * `connected` mirrors a recent handshake (FSM timeout). Peers that are not
-	 * connected are reported as "never" for the admin summary because poll_state
-	 * does not retain historical handshake timestamps.
+	 * `connected` is a recent handshake inside the FSM window (~180s), not
+	 * "ever handshook". poll_state does not store lifetime handshake history,
+	 * so `never` is always null (unknown).
 	 *
-	 * @return array{total: int, with_handshake: int, never: int}
+	 * @return array{total: int, connected: int, not_connected: int, never: null}
 	 */
 	public function countHandshakeStats(): array
 	{
@@ -65,20 +65,35 @@ class PollStateMapper extends QBMapper
 			->from($this->getTableName());
 		$result = $qb->executeQuery();
 
-		$total = 0;
-		$withHandshake = 0;
+		$flags = [];
 		while ($row = $result->fetchAssociative()) {
-			$total++;
 			$connected = $row['connected'] ?? false;
-			if ($connected === true || $connected === 1 || $connected === '1') {
-				$withHandshake++;
-			}
+			$flags[] = ($connected === true || $connected === 1 || $connected === '1');
 		}
 
+		return self::aggregateHandshakeFlags($flags);
+	}
+
+	/**
+	 * Pure aggregation for unit tests — disconnected ≠ never-handshaked.
+	 *
+	 * @param list<bool> $connectedFlags
+	 * @return array{total: int, connected: int, not_connected: int, never: null}
+	 */
+	public static function aggregateHandshakeFlags(array $connectedFlags): array
+	{
+		$total = count($connectedFlags);
+		$connected = 0;
+		foreach ($connectedFlags as $flag) {
+			if ($flag) {
+				$connected++;
+			}
+		}
 		return [
 			'total' => $total,
-			'with_handshake' => $withHandshake,
-			'never' => $total - $withHandshake,
+			'connected' => $connected,
+			'not_connected' => $total - $connected,
+			'never' => null,
 		];
 	}
 }

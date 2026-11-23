@@ -12,7 +12,11 @@
 				{{ serverMessage || 'Unavailable — break-glass loopback (127.0.0.1:51821) if needed.' }}
 			</p>
 			<dl v-else-if="server" class="nc-wg-server-dl">
-				<div><dt>Host</dt><dd>{{ server.host || '—' }}</dd></div>
+				<div>
+					<dt>Endpoint (in client configs)</dt>
+					<dd>{{ server.endpoint || (server.host && server.port ? server.host + ':' + server.port : (server.host || '—')) }}</dd>
+				</div>
+				<div><dt>Engine admin URL host</dt><dd>{{ server.adminUiHost || '—' }}</dd></div>
 				<div><dt>UDP port</dt><dd>{{ server.port ?? '—' }}</dd></div>
 				<div><dt>Interface</dt><dd>{{ server.interfaceName || '—' }} / {{ server.device || '—' }}</dd></div>
 				<div><dt>IPv4 CIDR</dt><dd class="mono">{{ server.ipv4Cidr || '—' }}</dd></div>
