@@ -272,6 +272,10 @@ class SettingsController extends Controller
 		if (preg_match('/[\s\/:#\?\\\\]/', $host) === 1) {
 			return false;
 		}
+		// All-numeric dotted labels must be a real IPv4 (rejects 999.1.1.1, 1.2.3, …).
+		if (preg_match('/^\d+(\.\d+)+$/', $host) === 1) {
+			return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+		}
 		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
 			return true;
 		}

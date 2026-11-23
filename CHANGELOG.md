@@ -11,7 +11,14 @@
 - System tab / `getServerDefaults` now show the real client-config Endpoint
   (`host:port` from `/api/admin/userconfig`), not the engine admin URL host.
 - Health handshake counts: `connected` is recent-FSM only; `never` is unknown
-  (null). Idle peers no longer raise a "Peers without handshake" warning.
+  (null). Warning shows for peers without a recent handshake (`peers_not_connected`);
+  lifetime never-handshaked count stays unknown.
+- Stale heartbeat still shows last poll, last error, and handshake summary/warning
+  under Status unknown (only a failed health GET hides those details).
+- Unreadable VPN endpoint host shows "unknown — <reason>" in admin settings and
+  System tab (`endpointError` from `getServerDefaults` when userconfig fails).
+- Endpoint host validator rejects all-numeric dotted strings that are not valid
+  IPv4 (e.g. `999.1.1.1`, `1.2.3`).
 - Legacy key copy: "unused; safe to remove…" only for `dashboard_internal_url`;
   `wg_sync_url` / `wg_sync_token` labelled as still used by the lab/native path.
 - Stale heartbeat (> max(60, pollInterval*2)) returns status `unknown` and does

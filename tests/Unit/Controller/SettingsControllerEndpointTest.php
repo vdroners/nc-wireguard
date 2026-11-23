@@ -25,6 +25,9 @@ final class SettingsControllerEndpointTest extends TestCase
 		self::assertFalse(SettingsController::isValidEndpointHost('host:51820'));
 		self::assertFalse(SettingsController::isValidEndpointHost(''));
 		self::assertFalse(SettingsController::isValidEndpointHost('vpn.example/path'));
+		self::assertFalse(SettingsController::isValidEndpointHost('999.1.1.1'));
+		self::assertFalse(SettingsController::isValidEndpointHost('256.0.0.1'));
+		self::assertFalse(SettingsController::isValidEndpointHost('1.2.3'));
 		self::assertTrue(SettingsController::isValidEndpointHost('cloud-vdroners.ddns.net'));
 		self::assertTrue(SettingsController::isValidEndpointHost('10.0.0.84'));
 	}

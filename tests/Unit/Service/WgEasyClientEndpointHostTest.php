@@ -112,5 +112,37 @@ final class WgEasyClientEndpointHostTest extends TestCase
 		self::assertSame(51820, $result['port']);
 		self::assertSame('cloud-vdroners.ddns.net:51820', $result['endpoint']);
 		self::assertSame('127.0.0.1', $result['adminUiHost']);
+		self::assertArrayNotHasKey('endpointError', $result);
+	}
+
+	public function testGetServerDefaultsUserconfigFailureSetsEndpointErrorWithoutSecrets(): void
+	{
+		$settings = $this->createMock(AppSettings::class);
+		$settings->method('getWgEasyAdminUrl')->willReturn('http://127.0.0.1:51821');
+		$client = $this->client($settings);
+		$client->responses = [
+			['http_code' => 200, 'error' => '', 'json' => ['sessionTimeout' => 3600]],
+			['http_code' => 200, 'error' => '', 'json' => [
+				'port' => 51820,
+				'mtu' => 1420,
+				'ipv4Cidr' => '10.8.0.0/24',
+				'ipv6Cidr' => '',
+				'name' => 'wg0',
+				'device' => 'eth0',
+				'enabled' => true,
+			]],
+			['http_code' => 500, 'error' => 'engine secret-body-xyz', 'json' => ['secret' => 'should-not-leak']],
+		];
+
+		$result = $client->getServerDefaults();
+
+		self::assertTrue($result['ok']);
+		self::assertNull($result['host']);
+		self::assertArrayHasKey('endpointError', $result);
+		self::assertNotSame('', (string) $result['endpointError']);
+		$encoded = json_encode($result, JSON_THROW_ON_ERROR);
+		self::assertStringNotContainsString('should-not-leak', $encoded);
+		self::assertStringNotContainsString('secret-body-xyz', $encoded);
+		self::assertStringNotContainsString('secret', $encoded);
 	}
 }

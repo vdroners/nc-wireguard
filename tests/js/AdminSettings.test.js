@@ -94,7 +94,9 @@ function mockApis({
 	health = healthPayload,
 	endpoint = endpointPayload,
 	settingsError = null,
+	endpointError = null,
 	endpointPost = null,
+	settingsPut = null,
 } = {}) {
 	axiosMock.mockImplementation((opts) => {
 		const url = typeof opts === 'string' ? opts : opts.url
@@ -109,6 +111,9 @@ function mockApis({
 			return Promise.resolve({ data: health })
 		}
 		if (method === 'GET' && url.includes('/api/settings/endpoint')) {
+			if (endpointError) {
+				return Promise.reject(endpointError)
+			}
 			return Promise.resolve({ data: endpoint })
 		}
 		if (method === 'POST' && url.includes('/api/settings/endpoint')) {
@@ -118,6 +123,9 @@ function mockApis({
 			return Promise.resolve({ data: { ok: true, host: opts.data.host, port: endpoint.port } })
 		}
 		if (method === 'PUT' && url.endsWith('/api/settings')) {
+			if (typeof settingsPut === 'function') {
+				return settingsPut(opts)
+			}
 			return Promise.resolve({ data: { ...settings, ...opts.data } })
 		}
 		if (method === 'POST' && url.includes('/test-wg-easy')) {
@@ -253,13 +261,16 @@ describe('AdminSettings.vue', () => {
 		wrapper.destroy()
 	})
 
-	it('Health card shows connected vs not-connected; never unknown; no idle warning', async () => {
+	it('Health card shows connected vs not-connected; never unknown; warning when not-connected > 0', async () => {
 		mockApis()
 		const wrapper = await mountAdmin()
 		expect(wrapper.text()).toMatch(/2 of 4 peers connected recently/)
 		expect(wrapper.text()).toMatch(/not connected: 2/)
 		expect(wrapper.text()).toMatch(/never: unknown/)
-		expect(wrapper.find('.stub-note[data-type="warning"]').exists()).toBe(false)
+		const warn = wrapper.find('.stub-note[data-type="warning"]')
+		expect(warn.exists()).toBe(true)
+		expect(warn.text()).toMatch(/Peers without a recent handshake/)
+		expect(warn.text()).toMatch(/2 of 4 peers have not handshaken recently/)
 		const legacy = wrapper.find('[data-testid="legacy-keys"]')
 		expect(legacy.exists()).toBe(true)
 		expect(legacy.text()).toContain('dashboard_internal_url')
@@ -268,6 +279,50 @@ describe('AdminSettings.vue', () => {
 		expect(legacy.text()).toMatch(/unused; safe to remove with occ config:app:delete after review/)
 		expect(legacy.text()).toMatch(/still used by the optional lab\/native wg-sync path/)
 		expect(legacy.text()).not.toMatch(/enc:v1:|http:\/\/|token-value|secret-value/i)
+		wrapper.destroy()
+	})
+
+	it('Health card hides handshake warning when all peers are connected', async () => {
+		mockApis({
+			health: {
+				...healthPayload,
+				peers_total: 3,
+				peers_connected: 3,
+				peers_not_connected: 0,
+				peers_never_handshake: null,
+			},
+		})
+		const wrapper = await mountAdmin()
+		expect(wrapper.text()).toMatch(/3 of 3 peers connected recently/)
+		expect(wrapper.find('.stub-note[data-type="warning"]').exists()).toBe(false)
+		wrapper.destroy()
+	})
+
+	it('stale health still shows poll, error, summary and warning under Status unknown', async () => {
+		mockApis({
+			health: {
+				status: 'unknown',
+				known: true,
+				status_reason: 'last poll older than 60s — treating as unknown',
+				last_poll_at: '2026-11-23T12:00:00+00:00',
+				wg_easy_ok: null,
+				error_message: 'poll timed out',
+				peers_total: 6,
+				peers_connected: 0,
+				peers_not_connected: 6,
+				peers_never_handshake: null,
+				legacy_keys_present: [],
+			},
+		})
+		const wrapper = await mountAdmin()
+		expect(wrapper.text()).toMatch(/Status: unknown/)
+		expect(wrapper.text()).toMatch(/last poll older than 60s/)
+		expect(wrapper.text()).toMatch(/wg_easy_ok:\s*unknown/)
+		expect(wrapper.text()).toContain('2026-11-23T12:00:00+00:00')
+		expect(wrapper.text()).toMatch(/Last error:\s*poll timed out/)
+		expect(wrapper.text()).toMatch(/0 of 6 peers connected recently/)
+		expect(wrapper.find('.stub-note[data-type="warning"]').exists()).toBe(true)
+		expect(wrapper.text()).toMatch(/6 of 6 peers have not handshaken recently/)
 		wrapper.destroy()
 	})
 
@@ -283,19 +338,73 @@ describe('AdminSettings.vue', () => {
 		wrapper.destroy()
 	})
 
-	it('invalid hostnames block Save with a message and send no POST', async () => {
+	it('endpoint GET failure shows unknown host with reason', async () => {
+		mockApis({
+			endpointError: { response: { data: { error: 'endpoint unavailable' } }, message: 'endpoint unavailable' },
+		})
+		const wrapper = await mountAdmin()
+		expect(wrapper.text()).toMatch(/Current endpoint host:\s*unknown/)
+		expect(wrapper.text()).toMatch(/endpoint unavailable|endpoint could not be read from the engine/)
+		expect(wrapper.find('[data-testid="endpoint-host"] input').element.value).toBe('')
+		wrapper.destroy()
+	})
+
+	it('endpoint host null shows unknown with reason and does not treat blank as saved', async () => {
+		mockApis({
+			endpoint: { ok: true, host: null, port: 51820, error: 'host missing in userconfig' },
+		})
+		const wrapper = await mountAdmin()
+		expect(wrapper.text()).toMatch(/Current endpoint host:\s*unknown/)
+		expect(wrapper.text()).toContain('host missing in userconfig')
+		const hostInput = wrapper.find('[data-testid="endpoint-host"] input')
+		await hostInput.setValue('not valid!!')
+		await wrapper.find('[data-testid="endpoint-save"]').trigger('click')
+		await flush()
+		expect(hostInput.element.value).toBe('')
+		expect(wrapper.find('.stub-note[data-type="error"]').text()).toMatch(/Invalid hostname/)
+		wrapper.destroy()
+	})
+
+	it('invalid hostnames block Save with error note and send no POST', async () => {
 		mockApis()
 		const wrapper = await mountAdmin()
 		axiosMock.mockClear()
 		const hostInput = wrapper.find('[data-testid="endpoint-host"] input')
-		for (const bad of ['https://x', 'a b', 'host:51820', '']) {
+		for (const bad of ['https://x', 'a b', 'host:51820', '', '999.1.1.1', '1.2.3']) {
 			await hostInput.setValue(bad)
 			await wrapper.find('[data-testid="endpoint-save"]').trigger('click')
 			await flush()
-			expect(wrapper.text()).toMatch(/Invalid hostname|hostname|IPv4/i)
+			const errNote = wrapper.findAll('.stub-note[data-type="error"]').wrappers
+				.find((n) => n.text().includes('Invalid hostname'))
+			expect(errNote).toBeTruthy()
+			expect(errNote.text()).toContain('Invalid hostname')
 			const posts = axiosMock.mock.calls.filter((c) => (c[0].method || '').toUpperCase() === 'POST')
 			expect(posts).toHaveLength(0)
 		}
+		wrapper.destroy()
+	})
+
+	it('failed settings PUT clears Saved and shows error', async () => {
+		let putCount = 0
+		mockApis({
+			settingsPut: (opts) => {
+				putCount++
+				if (putCount === 1) {
+					return Promise.resolve({ data: { ...settingsPayload, ...opts.data } })
+				}
+				return Promise.reject({ response: { data: { error: 'save refused' } }, message: 'save refused' })
+			},
+		})
+		const wrapper = await mountAdmin()
+		await wrapper.findAll('.stub-button').wrappers.find((b) => b.text() === 'Save').trigger('click')
+		await flush()
+		expect(wrapper.find('.stub-note[data-type="success"]').exists()).toBe(true)
+		expect(wrapper.text()).toMatch(/Saved/)
+		await wrapper.findAll('.stub-button').wrappers.find((b) => b.text() === 'Save').trigger('click')
+		await flush()
+		expect(wrapper.find('.stub-note[data-type="success"]').exists()).toBe(false)
+		expect(wrapper.find('.stub-note[data-type="error"]').exists()).toBe(true)
+		expect(wrapper.text()).toContain('save refused')
 		wrapper.destroy()
 	})
 

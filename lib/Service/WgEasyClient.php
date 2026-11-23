@@ -182,6 +182,7 @@ class WgEasyClient
 
 		$endpointHost = null;
 		$endpointPort = isset($if['port']) ? (int) $if['port'] : null;
+		$endpointError = null;
 		$userConfig = $this->getUserConfig();
 		if ($userConfig['ok'] && is_array($userConfig['config'] ?? null)) {
 			$uc = $userConfig['config'];
@@ -191,6 +192,9 @@ class WgEasyClient
 			if (isset($uc['port']) && is_numeric($uc['port'])) {
 				$endpointPort = (int) $uc['port'];
 			}
+		} else {
+			// Short, no secrets / no engine body.
+			$endpointError = 'userconfig could not be read';
 		}
 
 		$endpoint = null;
@@ -207,7 +211,7 @@ class WgEasyClient
 			'Endpoint (in client configs) is the userconfig host:port — change it from Admin settings.',
 		];
 
-		return [
+		$result = [
 			'ok' => true,
 			'unavailable' => false,
 			'host' => $endpointHost,
@@ -227,6 +231,10 @@ class WgEasyClient
 			'defaultKeepalive' => null,
 			'notes' => $notes,
 		];
+		if ($endpointError !== null) {
+			$result['endpointError'] = $endpointError;
+		}
+		return $result;
 	}
 
 	/**

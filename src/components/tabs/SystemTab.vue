@@ -14,10 +14,10 @@
 			<dl v-else-if="server" class="nc-wg-server-dl">
 				<div>
 					<dt>Endpoint (in client configs)</dt>
-					<dd>{{ server.endpoint || (server.host && server.port ? server.host + ':' + server.port : (server.host || '—')) }}</dd>
+					<dd>{{ endpointDisplay }}</dd>
 				</div>
 				<div><dt>Engine admin URL host</dt><dd>{{ server.adminUiHost || '—' }}</dd></div>
-				<div><dt>UDP port</dt><dd>{{ server.port ?? '—' }}</dd></div>
+				<div><dt>UDP port</dt><dd>{{ portDisplay }}</dd></div>
 				<div><dt>Interface</dt><dd>{{ server.interfaceName || '—' }} / {{ server.device || '—' }}</dd></div>
 				<div><dt>IPv4 CIDR</dt><dd class="mono">{{ server.ipv4Cidr || '—' }}</dd></div>
 				<div><dt>IPv6 CIDR</dt><dd class="mono">{{ server.ipv6Cidr || '—' }}</dd></div>
@@ -104,6 +104,22 @@ export default {
 				return 'Host system metrics unavailable — mount /host/proc in cloud_app or check poller (see docs/ops/host-proc-mount.md).'
 			}
 			return ''
+		},
+		endpointDisplay() {
+			const s = this.server
+			if (!s) return '—'
+			if (s.endpoint) return s.endpoint
+			if (s.host && s.port) return s.host + ':' + s.port
+			if (s.host) return s.host
+			if (s.endpointError) return 'unknown — ' + s.endpointError
+			return '—'
+		},
+		portDisplay() {
+			const s = this.server
+			if (!s) return '—'
+			if (s.port !== null && s.port !== undefined) return s.port
+			if (s.endpointError) return 'unknown — ' + s.endpointError
+			return '—'
 		},
 	},
 	methods: {

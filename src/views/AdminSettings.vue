@@ -19,7 +19,7 @@
 						{{ t('nc_wireguard', 'Status: unknown') }}
 						<span v-if="health.status_reason"> — {{ health.status_reason }}</span>
 					</p>
-					<template v-else>
+					<template v-if="showHealthDetails">
 						<p>
 							{{ t('nc_wireguard', 'Last poll') }}:
 							{{ health.last_poll_at || t('nc_wireguard', 'unknown') }}
@@ -39,8 +39,8 @@
 						<NcNoteCard
 							v-if="showHandshakeWarning"
 							type="warning"
-							:heading="t('nc_wireguard', 'Peers without handshake')">
-							{{ handshakeSummary }}
+							:heading="t('nc_wireguard', 'Peers without a recent handshake')">
+							{{ handshakeWarningBody }}
 						</NcNoteCard>
 					</template>
 					<div
@@ -69,6 +69,14 @@
 					<h3>{{ t('nc_wireguard', 'VPN endpoint') }}</h3>
 					<p class="muted">
 						{{ t('nc_wireguard', 'Changing this changes the Endpoint in every newly downloaded client config; existing peers must re-import their config. Server keys and peers are not changed.') }}
+					</p>
+					<p
+						v-if="endpointHostUnknown"
+						class="muted"
+						data-testid="endpoint-host-unknown">
+						{{ t('nc_wireguard', 'Current endpoint host') }}:
+						{{ t('nc_wireguard', 'unknown') }}
+						<span v-if="endpointHostUnknownReason"> — {{ endpointHostUnknownReason }}</span>
 					</p>
 					<NcNoteCard v-if="endpointError" type="error" :heading="t('nc_wireguard', 'Error')">
 						{{ endpointError }}
@@ -242,11 +250,13 @@ export default {
 			testResult: null,
 			wgEasyTestResult: null,
 			endpointHost: '',
-			endpointHostSaved: '',
+			endpointHostSaved: null,
 			endpointPort: null,
 			endpointSaving: false,
 			endpointMessage: '',
 			endpointError: '',
+			endpointHostUnknown: false,
+			endpointHostUnknownReason: '',
 		}
 	},
 	computed: {
@@ -275,6 +285,11 @@ export default {
 		},
 		healthUnknown() {
 			return !this.health || this.health.status === 'unknown' || this.health.known === false
+		},
+		showHealthDetails() {
+			// known:false = health GET failed — nothing else to show. Stale (known:true,
+			// status unknown) still carries last poll / error / peer counts.
+			return this.health && this.health.known !== false
 		},
 		legacyKeys() {
 			return Array.isArray(this.health.legacy_keys_present)
@@ -308,10 +323,17 @@ export default {
 				: String(idle)
 			return `${n} of ${m} peers connected recently (not connected: ${idleLabel}; never: ${neverLabel})`
 		},
+		handshakeWarningBody() {
+			const idle = this.health.peers_not_connected
+			const total = this.health.peers_total
+			if (typeof idle !== 'number' || typeof total !== 'number') {
+				return this.handshakeSummary
+			}
+			return `${idle} of ${total} peers have not handshaken recently`
+		},
 		showHandshakeWarning() {
-			// Only when a stored signal proves never-handshaked (we cannot today).
-			const k = this.health.peers_never_handshake
-			return typeof k === 'number' && k > 0
+			const idle = this.health.peers_not_connected
+			return typeof idle === 'number' && idle > 0
 		},
 	},
 	async mounted() {
@@ -338,16 +360,35 @@ export default {
 				const [settingsRes, healthRes, endpointRes] = await Promise.all([
 					this.api(''),
 					this.api('/health').catch(() => ({ data: { status: 'unknown', status_reason: 'health endpoint unavailable', known: false } })),
-					this.api('/endpoint').catch(() => ({ data: { ok: false, host: null, port: null } })),
+					this.api('/endpoint').catch((e) => ({
+						data: {
+							ok: false,
+							host: null,
+							port: null,
+							error: e?.response?.data?.error || 'endpoint could not be read from the engine',
+						},
+					})),
 				])
 				this.settings = settingsRes.data
 				this.health = healthRes.data || {}
 				this.wgEasyPassword = ''
 				this.geoipApiKey = ''
 				const ep = endpointRes.data || {}
-				this.endpointHost = typeof ep.host === 'string' ? ep.host : ''
-				this.endpointHostSaved = this.endpointHost
+				const host = typeof ep.host === 'string' && ep.host !== '' ? ep.host : null
 				this.endpointPort = ep.port ?? null
+				if (host === null) {
+					this.endpointHost = ''
+					// Do not treat blank as the saved host.
+					this.endpointHostSaved = null
+					this.endpointHostUnknown = true
+					this.endpointHostUnknownReason = ep.error
+						|| 'endpoint could not be read from the engine'
+				} else {
+					this.endpointHost = host
+					this.endpointHostSaved = host
+					this.endpointHostUnknown = false
+					this.endpointHostUnknownReason = ''
+				}
 			} catch (e) {
 				this.error = e?.response?.data?.error || e.message
 			} finally {
@@ -358,10 +399,12 @@ export default {
 			const h = (host || '').trim()
 			if (!h || h.length > 253) return false
 			if (/[\s\/:#?\\]/.test(h)) return false
-			if (/^(\d{1,3}\.){3}\d{1,3}$/.test(h)) {
+			// All-numeric dotted labels must be a real IPv4 (rejects 999.1.1.1, 1.2.3, …).
+			if (/^\d+(\.\d+)+$/.test(h)) {
+				if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(h)) return false
 				return h.split('.').every((o) => {
 					const n = Number(o)
-					return n >= 0 && n <= 255
+					return Number.isInteger(n) && n >= 0 && n <= 255
 				})
 			}
 			return /^(?=.{1,253}$)([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$/.test(h)
@@ -376,7 +419,7 @@ export default {
 					'nc_wireguard',
 					'Invalid hostname — use an RFC 1123 hostname or IPv4 (no scheme, port, or spaces)',
 				)
-				this.endpointHost = this.endpointHostSaved
+				this.endpointHost = this.endpointHostSaved === null ? '' : this.endpointHostSaved
 				this.endpointSaving = false
 				return
 			}
@@ -385,6 +428,8 @@ export default {
 				const { data } = await this.api('/endpoint', { method: 'POST', data: { host } })
 				this.endpointHost = data.host || host
 				this.endpointHostSaved = this.endpointHost
+				this.endpointHostUnknown = false
+				this.endpointHostUnknownReason = ''
 				if (data.port !== undefined && data.port !== null) {
 					this.endpointPort = data.port
 				}
@@ -392,7 +437,7 @@ export default {
 			} catch (e) {
 				this.endpointMessage = ''
 				this.endpointError = e?.response?.data?.error || e.message
-				this.endpointHost = this.endpointHostSaved
+				this.endpointHost = this.endpointHostSaved === null ? '' : this.endpointHostSaved
 			} finally {
 				this.endpointSaving = false
 			}
